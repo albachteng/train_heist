@@ -1,5 +1,6 @@
 # Compiler
 CXX := g++
+CC := gcc
 CXXFLAGS := -std=c++17 -Wall -Wextra -Iengine/ecs/include -Iengine/rendering/include
 LDFLAGS :=
 
@@ -13,8 +14,8 @@ ifeq ($(OS),Windows_NT)
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
-    	SFML_LIBS := -Lthird_party/SFML/install/linux/lib -lsfml-graphics -lsfml-window -lsfml-system
-		SFML_INCLUDES := -Ithird_party/SFML/install/linux/include
+        SFML_LIBS := -Lthird_party/SFML/install/linux/lib -lsfml-graphics -lsfml-window -lsfml-system
+        SFML_INCLUDES := -Ithird_party/SFML/install/linux/include
         GTEST_LIBS := -Lthird_party/googletest/linux/lib -lgtest -lgtest_main -lpthread
         OPENGL_LIB := -lGL
         BUILD_DIR := build/linux
@@ -28,27 +29,31 @@ else
     endif
 endif
 
-CXXFLAGS += $(SFML_INCLUDES)
+# Add SFML & GLAD includes
+CXXFLAGS += $(SFML_INCLUDES) -Ithird_party/glad/include
 
 # Directories
 SRC_DIR := src
 ECS_DIR := engine/ecs
 RENDER_DIR := engine/rendering
+GLAD_DIR := third_party/glad
 TEST_DIR := tests
 
 # Create build directories
-$(shell mkdir -p $(BUILD_DIR)/ecs $(BUILD_DIR)/rendering $(BUILD_DIR)/tests)
+$(shell mkdir -p $(BUILD_DIR)/ecs $(BUILD_DIR)/rendering $(BUILD_DIR)/tests $(BUILD_DIR)/glad)
 
 # Source files
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
 ECS_SRC := $(wildcard $(ECS_DIR)/src/*.cpp)
 RENDER_SRC := $(wildcard $(RENDER_DIR)/src/*.cpp)
+GLAD_SRC := $(GLAD_DIR)/src/glad.c
 TEST_SRC := $(wildcard $(TEST_DIR)/*.cpp)
 
 # Object files
 OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SRC_FILES))
 ECS_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/ecs/%.o,$(ECS_SRC))
 RENDER_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/rendering/%.o,$(RENDER_SRC))
+GLAD_OBJ := $(BUILD_DIR)/glad/glad.o
 TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRC))
 
 # Targets
@@ -59,11 +64,11 @@ TEST_EXEC := $(BUILD_DIR)/ecs_tests
 all: $(EXEC)
 
 # Game executable
-$(EXEC): $(OBJ) $(ECS_OBJ) $(RENDER_OBJ)
+$(EXEC): $(OBJ) $(ECS_OBJ) $(RENDER_OBJ) $(GLAD_OBJ)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(SFML_LIBS) $(OPENGL_LIB)
 
 # ECS tests executable
-$(TEST_EXEC): $(ECS_OBJ) $(TEST_OBJ)
+$(TEST_EXEC): $(ECS_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(OPENGL_LIB)
 
 # Compile source files
@@ -78,6 +83,10 @@ $(BUILD_DIR)/rendering/%.o: $(RENDER_DIR)/src/%.cpp
 
 $(BUILD_DIR)/tests/%.o: $(TEST_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Compile GLAD
+$(GLAD_OBJ): $(GLAD_SRC)
+	$(CC) -I$(GLAD_DIR)/include -c $< -o $@
 
 # Phony targets
 .PHONY: clean run test
