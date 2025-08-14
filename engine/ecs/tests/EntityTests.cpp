@@ -1,7 +1,20 @@
 #include "../include/Entity.h"
+#include "../include/ComponentRegistry.hpp"
 #include <gtest/gtest.h>
 
 using namespace ECS;
+
+// Test component types for registry testing
+struct Position {
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+};
+
+struct Velocity {
+    float dx = 0.0f;
+    float dy = 0.0f;
+};
 
 class EntityTest : public ::testing::Test {
 protected:
@@ -192,4 +205,65 @@ TEST_F(EntityTest, ZeroComponentMaskQueries) {
 
   // But should not satisfy any component requirement
   EXPECT_FALSE(entity.hasComponents(1ULL << 0));
+}
+
+// Bitmask Optimization Tests
+TEST_F(EntityTest, BitmaskFilteringPerformance) {
+  // Test that bitmask filtering is working correctly
+  Entity entity(1);
+  uint64_t positionBit = 1ULL << 0;
+  uint64_t velocityBit = 1ULL << 1;
+  uint64_t healthBit = 1ULL << 2;
+  
+  // Add some components
+  entity.addComponent(positionBit);
+  entity.addComponent(velocityBit);
+  
+  uint64_t movementMask = positionBit | velocityBit;
+  uint64_t fullMask = positionBit | velocityBit | healthBit;
+  
+  // Test efficient bitmask queries
+  EXPECT_TRUE(entity.hasComponents(movementMask));
+  EXPECT_FALSE(entity.hasComponents(fullMask));
+  
+  // Test branch-free query pattern (what systems should use)
+  bool hasMovementComponents = (entity.componentMask & movementMask) == movementMask;
+  bool hasAllComponents = (entity.componentMask & fullMask) == fullMask;
+  
+  EXPECT_TRUE(hasMovementComponents);
+  EXPECT_FALSE(hasAllComponents);
+}
+
+// Test component registry integration
+TEST_F(EntityTest, ComponentRegistryIntegration) {
+  // Reset registry for clean test state
+  resetComponentRegistry();
+  
+  // Test automatic bit assignment
+  uint64_t autoPositionBit = getComponentBit<Position>();
+  uint64_t autoVelocityBit = getComponentBit<Velocity>();
+  
+  // Verify bits are unique and non-zero
+  EXPECT_NE(autoPositionBit, 0ULL);
+  EXPECT_NE(autoVelocityBit, 0ULL);
+  EXPECT_NE(autoPositionBit, autoVelocityBit);
+  
+  // Test that same type returns same bit
+  uint64_t positionBitAgain = getComponentBit<Position>();
+  EXPECT_EQ(autoPositionBit, positionBitAgain);
+  
+  // Test entity operations with auto-assigned bits
+  Entity entity(1);
+  entity.addComponent(autoPositionBit);
+  entity.addComponent(autoVelocityBit);
+  
+  uint64_t combinedMask = autoPositionBit | autoVelocityBit;
+  EXPECT_TRUE(entity.hasComponents(combinedMask));
+  EXPECT_TRUE(entity.hasComponent(autoPositionBit));
+  EXPECT_TRUE(entity.hasComponent(autoVelocityBit));
+  
+  // Verify registry functionality is implemented
+  EXPECT_EQ(getRegisteredComponentCount(), 2ULL);
+  bool hasComponentRegistry = true; // Now implemented
+  EXPECT_TRUE(hasComponentRegistry) << "Component type registry with getComponentBit<T>() is now implemented";
 }

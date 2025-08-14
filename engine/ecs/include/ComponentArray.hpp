@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cassert>
+#include <type_traits>
 
 namespace ECS {
 
@@ -25,6 +26,15 @@ namespace ECS {
  */
 template <typename Component>
 class ComponentArray {
+    // ZII (Zero-is-Initialization) Compliance Enforcement
+    static_assert(std::is_trivially_copyable_v<Component>, 
+                  "Component types must be trivially copyable (POD structs only)");
+    static_assert(std::is_default_constructible_v<Component>, 
+                  "Component types must be default constructible");
+    // Note: We can't directly check for ZII compliance at compile time, but we enforce
+    // the prerequisites: trivial copyability and default construction. Developers must
+    // ensure all members have default initialization (= 0.0f, etc.) in their component structs.
+
 private:
     // NOTE: Currently using std::vector for simplicity. Future migration to memory arenas
     // will replace these with arena-allocated arrays for better performance.
