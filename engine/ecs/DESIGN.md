@@ -34,6 +34,7 @@ ecs/
 - Represented by simple `EntityID` (uint32_t) with optional generation counter.
 - Each entity has a **bitmask** tracking which components are present.
 - Supports efficient multi-component queries via bitwise AND.
+- **EntityHandle** provides safe external references without exposing internal ECS state.
 
 ```cpp
 using EntityID = uint32_t;
@@ -43,6 +44,14 @@ struct Entity {
     EntityID id;
     uint32_t generation = 0;
     uint64_t componentMask = 0; // bit i set if entity has component i
+};
+
+struct EntityHandle {
+    EntityID id;
+    uint32_t generation;
+    // Opaque reference for external systems - prevents direct component mask access
+    // Generational safety: detects stale references when entity IDs are reused
+    // API encapsulation: forces validation through ECS manager entry points
 };
 ```
 
