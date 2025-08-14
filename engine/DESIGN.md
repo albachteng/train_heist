@@ -9,8 +9,11 @@ A lightweight, ECS-driven 2D/2.5D engine for grid-based isometric games with sim
 - Memory arenas for fast, contiguous allocation of component arrays.
 
 ## 2. Architecture Overview
-- **ECS Core:** Manages entities and components, tracks component presence via bitmasks, and handles event dispatch using typed `Event<T>` payloads.  
-- **Systems:** Stateless functions operating over component arrays, using bitmask filtering for multi-component queries.  
+- **ECS Core:** Manages entities and components with automatic bit assignment, tracks component presence via bitmasks, and handles event dispatch using typed `Event<T>` payloads.  
+- **Component Registry:** Automatic component bit assignment using `getComponentBit<T>()` eliminates manual bit management.
+- **ZII Enforcement:** Static assertions ensure components are trivially copyable POD structs with default initialization.
+- **Systems:** Stateless functions operating over ComponentArray storage, using bitmask filtering for branch-free multi-component queries.  
+- **Event System:** Strongly typed EventQueue<T> with support for payload and no-payload events, including lambda-based processing.
 - **Separation of Concerns:** Rendering, physics, input, and resources live in independent modules for modularity and testability.  
 - **Data-Driven:** Game content (maps, entity archetypes, etc.) is loaded from external data files.
 
@@ -24,17 +27,57 @@ A lightweight, ECS-driven 2D/2.5D engine for grid-based isometric games with sim
 7. Components are zero-initialized (ZII) and optionally allocated in memory arenas for performance.  
 
 ## 4. Systems & Responsibilities
-- **ECS Core:** Entity/component management, bitmask tracking, and event dispatch.  
-- **Event System:** Typed `Event<T>` payloads for decoupled, type-safe communication between systems (e.g., input → movement → sound).  
+- **ECS Core:** Entity/component management with automatic bit assignment, bitmask tracking, and ZII compliance enforcement.  
+- **Component Registry:** Thread-safe automatic bit assignment using `getComponentBit<T>()` with type-based caching.
+- **Event System:** Typed `EventQueue<T>` with strongly typed payloads, lambda-based processing, and EmptyPayload support for simple events.  
 - **Rendering:** Sprite/tile drawing, camera transforms; queries Position + Sprite components via bitmask filtering.  
 - **Physics:** Movement, collisions, grid alignment; updates Position components based on Velocity or actions.  
-- **Input:** Maps user actions to events.  
+- **Input:** Maps user actions to events using EventQueue<T>.  
 - **Resources:** Loading/storing textures, maps, animations.  
 - **Game-Specific:** Scenes, entity prefabs, scripts.
 
 ## 5. Example Flow
-1. Input system detects keypress (e.g., Arrow Right).  
-2. Input system pushes a `MoveEvent<EntityID>` onto the EventQueue.  
-3. MovementSystem processes `MoveEvent`, updates Position component for the entity.  
-4. MovementSystem may push additional events (e.g., `SoundEvent`) that downstream systems subscribe to.  
-5. Rendering system queries Position + Sprite components (via bitmask filtering) and draws entities at updated positions.
+
+**Setup Phase:**
+```cpp
+// Automatic component bit assignment
+uint64_t positionBit = getComponentBit<Position>();
+uint64_t velocityBit = getComponentBit<Velocity>();
+uint64_t spriteBit = getComponentBit<Sprite>();
+
+// Component storage with ZII compliance enforcement
+ComponentArray<Position> positions;
+ComponentArray<Velocity> velocities; 
+ComponentArray<Sprite> sprites;
+
+// Event queues for inter-system communication
+EventQueue<MovementPayload> movementEvents;
+EventQueue<EmptyPayload> soundEvents;
+```
+
+**Runtime Flow:**
+1. **Input System** detects keypress (e.g., Arrow Right) → pushes MovementPayload{deltaX: 1.0f, deltaY: 0.0f} to movementEvents
+2. **Movement System** processes events using lambda:
+   ```cpp
+   movementEvents.process([&](const Event<MovementPayload>& event) {
+       Entity* entity = getEntity(event.source);
+       Position* pos = positions.get(event.source);
+       if (pos && entity->hasComponent(positionBit)) {
+           pos->x += event.payload.deltaX;
+           pos->y += event.payload.deltaY;
+           soundEvents.emplace(event.source, {}); // Trigger footstep sound
+       }
+   });
+   ```
+3. **Sound System** processes soundEvents for audio feedback
+4. **Rendering System** uses bitmask filtering to draw entities:
+   ```cpp
+   uint64_t renderMask = positionBit | spriteBit;
+   for (Entity& entity : entities) {
+       if ((entity.componentMask & renderMask) == renderMask) {
+           Position* pos = positions.get(entity.id);
+           Sprite* spr = sprites.get(entity.id);
+           draw(pos->x, pos->y, spr->texture);
+       }
+   }
+   ```

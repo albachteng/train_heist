@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Train Heist is a turn-based tactical strategy game engine written in C++ using a lightweight ECS (Entity-Component-System) architecture. The project is currently in the design phase with comprehensive documentation but no implementation code yet. The game features isometric 2.5D grid-based gameplay where players control multiple units to stop and board trains across different time periods.
+Train Heist is a turn-based tactical strategy game engine written in C++ using a lightweight ECS (Entity-Component-System) architecture. The ECS core is now implemented with Entity/ComponentArray/Event systems, component registry, and comprehensive test coverage. The game features isometric 2.5D grid-based gameplay where players control multiple units to stop and board trains across different time periods.
 
 ## Build System
 
@@ -50,8 +50,8 @@ The engine follows a strict modular ECS architecture with these systems:
 
 ## Development Workflow
 
-### Since No Code Exists Yet
-This is a greenfield project with comprehensive design documentation but no implementation:
+### Current Implementation Status
+The ECS core is implemented with comprehensive test coverage. Future development should follow these patterns:
 
 1. **Start with headers first** - Define component structs and system interfaces in `include/` directories
 2. **Write tests before implementation** - Create unit tests in module `tests/` directories
@@ -120,15 +120,58 @@ The engine is designed to be game-agnostic:
 
 ## Testing Strategy
 
+### Test File Organization
+- Follow 1:1 relationship: `FileName.cpp/.hpp` ↔ `tests/FileNameTests.cpp`
+- This makes it clear which test file covers which source file
+- Temporary test files are acceptable for debugging complex issues
+- After debugging, consolidate temporary tests into appropriate existing test files
+
+### TDD Process
+- Follow strict red-green-refactor cycles: see tests fail first, then implement
+- Discuss design changes before implementation to avoid unnecessary rework
+- Keep changes localized to as few files as possible before testing
+- Test consolidation should happen after implementation is complete and working
+
 ### Unit Test Organization
 - Each module has its own `tests/` directory
-- One test file per system/component: `ComponentArrayTests.cpp`, `MovementSystemTests.cpp`
 - ECS core logic must be fully testable without rendering or UI dependencies
 - Integration tests go in `tests/integration/`
 
 ### Test Commands
 - `make test` - Build and run all ECS unit tests
 - Tests use GoogleTest framework (available in `third_party/googletest/`)
+
+## Development Philosophy
+
+### Implementation Approach
+- Start simple, plan for optimization (e.g., std::vector → memory arenas)
+- Use static enforcement over runtime checks (static_assert vs runtime validation)
+- Measure performance improvements with concrete benchmarks (e.g., "14x faster")
+- Discuss architectural changes before implementing to ensure alignment
+
+### Code Quality Standards
+- Template files: prefer `.hpp` over `.tpp` for better IDE support
+- ZII compliance enforced through static_assert, not just documentation
+- Performance-first design decisions with cache-friendly patterns
+- API compatibility maintained during optimization migrations
+
+### Build System Preferences
+- Modular Makefile using TEST_MODULES list for scalability
+- Automatic file discovery where reasonable (e.g., `$(wildcard *.cpp)`)
+- Directory structure that supports future growth without major refactoring
+
+## Documentation Standards
+
+### Documentation Synchronization
+- Keep documentation synchronized with actual implementation
+- Provide concrete examples using real API calls from the codebase
+- Include performance benchmarks and tradeoffs in design decisions
+- Update design docs immediately after major implementation changes
+
+### Migration Strategy
+- Design APIs to support future optimizations without breaking changes
+- Document migration paths clearly (e.g., std::vector → memory arenas)
+- Maintain backward compatibility during optimization phases
 
 ## Performance Considerations
 
