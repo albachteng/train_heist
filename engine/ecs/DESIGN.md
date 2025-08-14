@@ -4,16 +4,96 @@
 Lightweight, C-style Entity-Component-System (ECS) for a turn-based 2.5D isometric grid game. 
 Focus on readability, testability, and modularity, with performance optimizations using memory arenas, bitsets, and zero-initialization.
 
+## Directory Structure
+
+ecs/
+├─ include/          # Public ECS headers (for outside modules)
+│   ├─ Entity.h
+│   ├─ ComponentArray.h
+│   ├─ Event.h
+│   └─ ECSUtils.h
+├─ src/              # Core ECS implementation
+│   ├─ Entity.cpp
+│   ├─ ComponentArray.cpp
+│   └─ Event.cpp
+├─ components/       # POD components (Position, Velocity, Sprite, etc.)
+│   ├─ Position.h
+│   ├─ Velocity.h
+│   └─ Sprite.h
+├─ systems/          # Pure ECS systems
+│   ├─ MovementSystem.h/.cpp
+│   └─ RenderSystem.h/.cpp
+├─ events/           # Typed Event structs & queues
+│   ├─ Event.h
+│   └─ EventQueue.h
+├─ tests/            # ECS unit tests, one test file per system/component
+│   ├─ ComponentArrayTests.cpp
+│   └─ MovementSystemTests.cpp
+
 ## Entities
 - Represented by simple `EntityID` (uint32_t) with optional generation counter.
 - Each entity has a **bitmask** tracking which components are present.
 - Supports efficient multi-component queries via bitwise AND.
+
+```cpp
+using EntityID = uint32_t;
+const EntityID INVALID_ENTITY = 0;
+
+struct Entity {
+    EntityID id;
+    uint32_t generation = 0;
+    uint64_t componentMask = 0; // bit i set if entity has component i
+};
+```
 
 ## Components
 - Plain Old Data (POD) structs.
 - Stored in **Struct-of-Arrays (SoA)** layout for cache efficiency.
 - Stored in **memory arenas** for fast allocation and swap-remove.
 - Zero-initialized on creation (ZII).
+
+```cpp
+template <typename Component>
+struct ComponentArray {
+    std::vector<Component> components;
+    std::vector<EntityID> entityIDs;
+    std::unordered_map<EntityID, size_t> entityIndex;
+
+    void add(EntityID e, const Component& c, uint64_t componentBit, Entity& entity) {
+        components.push_back(c);
+        entityIDs.push_back(e);
+        entityIndex[e] = components.size() - 1;
+        entity.componentMask |= componentBit; // update entity bitmask
+    }
+
+    bool has(EntityID e) const {
+        return entityIndex.find(e) != entityIndex.end();
+    }
+
+    Component* get(EntityID e) {
+        auto it = entityIndex.find(e);
+        return it != entityIndex.end() ? &components[it->second] : nullptr;
+    }
+
+    void remove(EntityID e, uint64_t componentBit, Entity& entity) {
+        auto it = entityIndex.find(e);
+        if (it == entityIndex.end()) return;
+
+        size_t idx = it->second;
+        EntityID lastEntity = entityIDs.back();
+
+        components[idx] = components.back();
+        entityIDs[idx] = lastEntity;
+        entityIndex[lastEntity] = idx;
+
+        components.pop_back();
+        entityIDs.pop_back();
+        entityIndex.erase(it);
+
+        entity.componentMask &= ~componentBit; // clear bit in entity mask
+    }
+};
+```
 
 ## Systems
 - Implemented as stateless functions operating on component arrays.
@@ -25,9 +105,49 @@ Focus on readability, testability, and modularity, with performance optimization
 - Event queues are decoupled from systems.
 - Supports type-safe subscriptions for sound, combat, or game effects.
 
+```cpp
+template <typename T>
+struct Event {
+    EntityID source;
+    T payload;
+};
+
+template <typename T>
+struct EventQueue {
+    std::vector<Event<T>> events;
+
+    void push(const Event<T>& e) { events.push_back(e); }
+
+    std::vector<Event<T>> popAll() {
+        auto copy = events;
+        events.clear();
+        return copy;
+    }
+};
+```
+
 ## Iteration / Queries
 - Multi-component queries performed via bitmask filtering (branch-free where possible).
 - Optional helper templates provide filtered views over component arrays.
+
+```cpp
+void MovementSystem(ComponentArray<Position>& positions,
+                    const ComponentArray<Velocity>& velocities,
+                    std::vector<Entity>& entities) 
+{
+    const uint64_t mask = (1ULL << 0) | (1ULL << 1); // Position + Velocity
+    for (auto& e : entities) {
+        if ((e.componentMask & mask) == mask) {
+            Position* pos = positions.get(e.id);
+            Velocity* vel = velocities.get(e.id);
+            if (pos && vel) {
+                pos->x += vel->dx;
+                pos->y += vel->dy;
+            }
+        }
+    }
+}
+```
 
 ## Debugging & Safety
 - Entity-component mapping can be printed via debug helpers.
