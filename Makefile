@@ -45,7 +45,7 @@ GLAD_DIR := third_party/OpenGL
 TEST_DIR := tests
 
 # Create build directories
-$(shell mkdir -p $(BUILD_DIR)/ecs $(BUILD_DIR)/rendering $(BUILD_DIR)/tests $(BUILD_DIR)/glad)
+$(shell mkdir -p $(BUILD_DIR)/ecs/src $(BUILD_DIR)/rendering $(BUILD_DIR)/tests $(BUILD_DIR)/glad)
 $(foreach module,$(TEST_MODULES),$(shell mkdir -p $(BUILD_DIR)/engine/$(module)/tests))
 
 # Source files
@@ -61,7 +61,7 @@ ENGINE_TEST_SRC := $(foreach module,$(TEST_MODULES),$(wildcard engine/$(module)/
 
 # Object files
 OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SRC_FILES))
-ECS_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/ecs/%.o,$(ECS_SRC))
+ECS_OBJ := $(patsubst $(ECS_DIR)/%.cpp,$(BUILD_DIR)/ecs/%.o,$(ECS_SRC))
 RENDER_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/rendering/%.o,$(RENDER_SRC))
 GLAD_OBJ := $(BUILD_DIR)/glad/glad.o
 TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRC))
@@ -86,7 +86,7 @@ $(TEST_EXEC): $(ENGINE_TEST_OBJ) $(ECS_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/ecs/%.o: $(ECS_DIR)/src/%.cpp
+$(BUILD_DIR)/ecs/src/%.o: $(ECS_DIR)/src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/rendering/%.o: $(RENDER_DIR)/src/%.cpp
