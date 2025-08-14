@@ -58,8 +58,21 @@ struct EntityHandle {
 ## Components
 - Plain Old Data (POD) structs.
 - Stored in **Struct-of-Arrays (SoA)** layout for cache efficiency.
-- Stored in **memory arenas** for fast allocation and swap-remove.
+- **FUTURE**: Stored in **memory arenas** for fast allocation and swap-remove.
 - Zero-initialized on creation (ZII).
+
+**Current Implementation**: ComponentArray uses std::vector for storage to prioritize 
+correctness and debugging during initial development. This provides:
+- Well-understood behavior and debugging support
+- Automatic memory management  
+- Standard library reliability
+
+**Planned Migration**: Memory arena implementation will replace std::vector to achieve:
+- 2-3x performance improvement for component iteration
+- Zero malloc calls during gameplay (single arena allocation)
+- Better cache locality through contiguous memory layout
+- Reduced memory fragmentation
+- The public ComponentArray API is designed to support this migration without changes.
 
 ```cpp
 template <typename Component>
