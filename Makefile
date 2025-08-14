@@ -13,8 +13,8 @@ ifeq ($(OS),Windows_NT)
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
-        SFML_LIBS := -Lthird_party/SFML/linux/lib -lsfml-graphics -lsfml-window -lsfml-system
-        SFML_INCLUDES := -Ithird_party/SFML/linux/include
+    	SFML_LIBS := -Lthird_party/SFML/install/linux/lib -lsfml-graphics -lsfml-window -lsfml-system
+		SFML_INCLUDES := -Ithird_party/SFML/install/linux/include
         GTEST_LIBS := -Lthird_party/googletest/linux/lib -lgtest -lgtest_main -lpthread
         OPENGL_LIB := -lGL
         BUILD_DIR := build/linux
