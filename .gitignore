@@ -1,0 +1,64 @@
+# ===============================
+# Build artifacts
+# ===============================
+/build/
+/bin/
+/lib/
+/obj/
+/out/
+/Debug/
+/Release/
+/dist/
+
+# Object & dependency files
+*.o
+*.obj
+*.d
+
+# Compiled binaries
+*.exe
+*.out
+*.app
+
+# ===============================
+# Third-party build outputs
+# ===============================
+third_party/**/build/
+third_party/**/bin/
+third_party/**/obj/
+third_party/**/lib/
+third_party/**/out/
+third_party/**/Debug/
+third_party/**/Release/
+
+# ===============================
+# OS / Editor / Misc
+# ===============================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# IDE / Editor configs
+.vscode/
+.idea/
+*.suo
+*.user
+*.userossc
+*.sln.docstates
+
+# ===============================
+# Logs / Cache / Temp
+# ===============================
+*.log
+*.tmp
+*.temp
+.cache/
