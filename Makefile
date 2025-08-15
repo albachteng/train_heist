@@ -15,7 +15,7 @@ ifeq ($(OS),Windows_NT)
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
-        SFML_LIBS := -Lthird_party/SFML/install/linux/lib -lsfml-graphics -lsfml-window -lsfml-system
+        SFML_LIBS := -Lthird_party/SFML/install/linux/lib -lsfml-graphics-s -lsfml-window-s -lsfml-system-s -lX11 -lXrandr -lXcursor -lXi -lfreetype -ludev -lpthread
         SFML_INCLUDES := -Ithird_party/SFML/install/linux/include
         GTEST_LIBS := third_party/googletest/linux/lib/libgtest.a third_party/googletest/linux/lib/libgtest_main.a -lpthread
         GTEST_INCLUDES := -Ithird_party/googletest/linux/include
@@ -39,6 +39,7 @@ TEST_CXXFLAGS := $(CXXFLAGS) $(GTEST_INCLUDES)
 
 # Directories
 SRC_DIR := src
+GAME_DIR := game
 ECS_DIR := engine/ecs
 COMPONENTS_DIR := engine/ecs/components
 LOGGING_DIR := engine/logging
@@ -47,11 +48,13 @@ GLAD_DIR := third_party/OpenGL
 TEST_DIR := tests
 
 # Create build directories
-$(shell mkdir -p $(BUILD_DIR)/ecs/src $(BUILD_DIR)/ecs/systems/src $(BUILD_DIR)/ecs/systems/tests $(BUILD_DIR)/ecs/components/src $(BUILD_DIR)/ecs/components/tests $(BUILD_DIR)/logging/src $(BUILD_DIR)/logging/tests $(BUILD_DIR)/rendering $(BUILD_DIR)/tests $(BUILD_DIR)/glad)
+$(shell mkdir -p $(BUILD_DIR)/ecs/src $(BUILD_DIR)/ecs/systems/src $(BUILD_DIR)/ecs/systems/tests $(BUILD_DIR)/ecs/components/src $(BUILD_DIR)/ecs/components/tests $(BUILD_DIR)/logging/src $(BUILD_DIR)/logging/tests $(BUILD_DIR)/rendering/src $(BUILD_DIR)/game/src $(BUILD_DIR)/game/systems $(BUILD_DIR)/tests $(BUILD_DIR)/glad)
 $(foreach module,$(TEST_MODULES),$(shell mkdir -p $(BUILD_DIR)/engine/$(module)/tests))
 
 # Source files
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+GAME_SRC := $(wildcard $(GAME_DIR)/src/*.cpp)
+GAME_SYSTEMS_SRC := $(wildcard $(GAME_DIR)/systems/*.cpp)
 ECS_SRC := $(wildcard $(ECS_DIR)/src/*.cpp)
 SYSTEMS_SRC := $(wildcard $(ECS_DIR)/systems/src/*.cpp)
 COMPONENTS_SRC := $(wildcard $(COMPONENTS_DIR)/src/*.cpp)
@@ -62,6 +65,8 @@ TEST_SRC := $(wildcard $(TEST_DIR)/*.cpp)
 
 # Engine modules that have tests
 TEST_MODULES := ecs logging rendering physics input resources
+# Add rendering to active test modules
+ACTIVE_TEST_MODULES := ecs logging rendering
 ENGINE_TEST_SRC := $(foreach module,$(TEST_MODULES),$(wildcard engine/$(module)/tests/*.cpp))
 # Special handling for components (nested under ecs)
 COMPONENTS_TEST_SRC := $(wildcard $(COMPONENTS_DIR)/tests/*.cpp)
@@ -69,11 +74,13 @@ SYSTEMS_TEST_SRC := $(wildcard $(ECS_DIR)/systems/tests/*.cpp)
 
 # Object files
 OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SRC_FILES))
+GAME_OBJ := $(patsubst $(GAME_DIR)/%.cpp,$(BUILD_DIR)/game/%.o,$(GAME_SRC))
+GAME_SYSTEMS_OBJ := $(patsubst $(GAME_DIR)/systems/%.cpp,$(BUILD_DIR)/game/systems/%.o,$(GAME_SYSTEMS_SRC))
 ECS_OBJ := $(patsubst $(ECS_DIR)/%.cpp,$(BUILD_DIR)/ecs/%.o,$(ECS_SRC))
 SYSTEMS_OBJ := $(patsubst $(ECS_DIR)/systems/%.cpp,$(BUILD_DIR)/ecs/systems/%.o,$(SYSTEMS_SRC))
 COMPONENTS_OBJ := $(patsubst $(COMPONENTS_DIR)/%.cpp,$(BUILD_DIR)/ecs/components/%.o,$(COMPONENTS_SRC))
 LOGGING_OBJ := $(patsubst $(LOGGING_DIR)/%.cpp,$(BUILD_DIR)/logging/%.o,$(LOGGING_SRC))
-RENDER_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/rendering/%.o,$(RENDER_SRC))
+RENDER_OBJ := $(patsubst $(RENDER_DIR)/%.cpp,$(BUILD_DIR)/rendering/%.o,$(RENDER_SRC))
 GLAD_OBJ := $(BUILD_DIR)/glad/glad.o
 TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRC))
 ENGINE_TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(ENGINE_TEST_SRC))
@@ -81,19 +88,19 @@ COMPONENTS_TEST_OBJ := $(patsubst $(COMPONENTS_DIR)/%.cpp,$(BUILD_DIR)/ecs/compo
 SYSTEMS_TEST_OBJ := $(patsubst $(ECS_DIR)/systems/%.cpp,$(BUILD_DIR)/ecs/systems/%.o,$(SYSTEMS_TEST_SRC))
 
 # Targets
-EXEC := $(BUILD_DIR)/game
+EXEC := $(BUILD_DIR)/train_heist
 TEST_EXEC := $(BUILD_DIR)/ecs_tests
 
 # Default target
 all: $(EXEC)
 
 # Game executable
-$(EXEC): $(OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(GLAD_OBJ)
+$(EXEC): $(GAME_OBJ) $(GAME_SYSTEMS_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(GLAD_OBJ)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(SFML_LIBS) $(OPENGL_LIB)
 
-# ECS tests executable
-$(TEST_EXEC): $(ENGINE_TEST_OBJ) $(COMPONENTS_TEST_OBJ) $(SYSTEMS_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
-	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(OPENGL_LIB)
+# ECS tests executable  
+$(TEST_EXEC): $(ENGINE_TEST_OBJ) $(COMPONENTS_TEST_OBJ) $(SYSTEMS_TEST_OBJ) $(GAME_SYSTEMS_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
+	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(SFML_LIBS) $(OPENGL_LIB)
 
 # Compile source files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
@@ -120,7 +127,13 @@ $(BUILD_DIR)/logging/src/%.o: $(LOGGING_DIR)/src/%.cpp
 $(BUILD_DIR)/logging/tests/%.o: $(LOGGING_DIR)/tests/%.cpp
 	$(CXX) $(TEST_CXXFLAGS) -I$(LOGGING_DIR)/include -c $< -o $@
 
-$(BUILD_DIR)/rendering/%.o: $(RENDER_DIR)/src/%.cpp
+$(BUILD_DIR)/rendering/src/%.o: $(RENDER_DIR)/src/%.cpp
+	$(CXX) $(CXXFLAGS) -I$(RENDER_DIR)/include -c $< -o $@
+
+$(BUILD_DIR)/game/src/%.o: $(GAME_DIR)/src/%.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/game/systems/%.o: $(GAME_DIR)/systems/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/tests/%.o: $(TEST_DIR)/%.cpp
@@ -139,6 +152,9 @@ $(GLAD_OBJ): $(GLAD_SRC)
 .PHONY: clean run test
 
 run: $(EXEC)
+	./$(EXEC)
+
+run-game: $(EXEC)
 	./$(EXEC)
 
 test: $(TEST_EXEC)
