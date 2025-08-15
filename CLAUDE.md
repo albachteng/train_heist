@@ -51,8 +51,53 @@ The engine follows a strict modular ECS architecture with these systems:
 
 ## Development Workflow
 
+### CRITICAL: Test-Driven Development (TDD) Process
+**ALWAYS follow the Red-Green-Refactor cycle for ALL code changes:**
+
+1. **RED STAGE** - Write failing tests first
+   - Create unit tests that capture expected behavior
+   - **PAUSE and ask for verification** before proceeding to implementation
+   - Tests should be comprehensive and cover edge cases
+
+2. **GREEN STAGE** - Implement minimal code to make tests pass
+   - Write only enough code to pass the tests
+   - **PAUSE and ask for verification** after implementing each component
+   - Keep implementations focused and small
+
+3. **REFACTOR STAGE** - Clean up and optimize
+   - Improve code quality while keeping tests green
+   - **PAUSE and verify** any significant refactoring
+
+### Task Granularity Requirements
+- **Complete ONE TODO item at a time** - No batching multiple tasks
+- **Pause for verification** between each TODO completion
+- **Small, reviewable chunks** - Each code change should be easily reviewable
+- **Ask before proceeding** when any code change exceeds ~50 lines
+
+### CRITICAL: Modular Development Requirements
+**ALWAYS work on ONE module at a time:**
+
+1. **Single Module Focus** - Work only within one module directory at a time
+   - Example: When working on `engine/input/`, do NOT modify `game/` or other engine modules
+   - Complete the module's implementation and tests before moving to integration
+
+2. **No Cross-Module Changes Without Consultation** 
+   - **NEVER modify files outside the current working module** without explicit approval
+   - **ASK FIRST** if you need to change APIs or interfaces in other modules
+   - **EXPLAIN** why cross-module changes are necessary before implementing
+
+3. **Integration as Separate Phase**
+   - Complete module development first (headers, implementation, tests all passing)
+   - **PAUSE** and verify module is complete before integration
+   - Integration (main.cpp, other modules) is a separate phase requiring approval
+
+4. **API Assumptions Prohibited**
+   - **DO NOT assume APIs exist** in other modules
+   - **READ existing code** to understand current interfaces
+   - **ASK** about missing APIs rather than implementing assumed interfaces
+
 ### Current Implementation Status
-The ECS core and systems layer are fully implemented with comprehensive test coverage (79 passing tests).
+The ECS core and systems layer are fully implemented with comprehensive test coverage (141 passing tests including rendering and input systems).
 
 **Development Progress**: See [ROADMAP.md](ROADMAP.md) for current development plan, phase tracking, and next steps.
 
