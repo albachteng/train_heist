@@ -158,6 +158,7 @@ The engine is designed to be game-agnostic:
 - Keep changes localized to as few files as possible before testing
 - Test consolidation should happen after implementation is complete and working
 - **IMPORTANT**: When creating new test files or directories, always update the Makefile to include them in the build system
+- **CRITICAL**: Never modify failing tests during the "Green" phase without explicit user approval - tests must remain unchanged once we move from Red to Green
 
 ### Unit Test Organization
 - Each module has its own `tests/` directory
