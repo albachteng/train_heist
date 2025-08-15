@@ -97,14 +97,5 @@ struct GridPosition {
 
 } // namespace ECS
 
-/**
- * Component registry declarations
- * These will be defined in the implementation to get unique bit assignments
- */
-namespace ECS {
-    // Component bit getter declarations
-    template<> uint64_t getComponentBit<Position>();
-    template<> uint64_t getComponentBit<Rotation>();
-    template<> uint64_t getComponentBit<Scale>();
-    template<> uint64_t getComponentBit<GridPosition>();
-}
+// No explicit template specializations needed - the generic getComponentBit<>() 
+// template in ComponentRegistry.hpp handles all component types automatically
