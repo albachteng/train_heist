@@ -18,10 +18,11 @@ We're using a **two-track approach** that delivers value quickly while building 
 - **Component Registry**: Automatic bit assignment for component types
 - **SystemUtils**: Helper functions for common ECS operations
 - **Logging System**: Multi-level logging with console/file output and global macros
-- **Test Coverage**: 94 passing tests with comprehensive coverage
+- **Transform Components**: Position, Rotation, Scale, GridPosition with 2.5D coordinate utilities ✅ **COMPLETED**
+- **Test Coverage**: 120 passing tests with comprehensive coverage
 
 ### 🚧 In Progress
-- Transform Components: Position, Rotation, Scale for 2.5D-ready coordinate system
+- **Next Item**: Physics Components or Rendering Components (ready to choose direction)
 
 ## 🚀 Development Phases
 
@@ -46,14 +47,17 @@ We're using a **two-track approach** that delivers value quickly while building 
   - Simple, fast logging with multiple levels (DEBUG, INFO, WARN, ERROR)
   - File and console output options
   - Component for runtime visibility and debugging
-- [ ] **Transform Components** (`engine/ecs/components/`)
-  - `Position { float x, y, z; }`
-  - `Rotation { float angle; }`
-  - `Scale { float x, y; }`
+- [x] **Transform Components** (`engine/ecs/components/`) ✅ **COMPLETED**
+  - `Position { float x, y, z; }` with 3D coordinates for 2.5D rendering
+  - `Rotation { float angle; }` for sprite rotation
+  - `Scale { float x, y; }` for non-uniform scaling
+  - `GridPosition { int x, y; }` for discrete tile-based logic
+  - Coordinate conversion utilities (grid↔world↔isometric)
+  - Distance calculations, interpolation, and angle utilities
 - [ ] **Physics Components**
-  - `Velocity { float dx, dy; }`
-  - `Acceleration { float dx, dy; }`
-  - `GridPosition { int x, y; }` (for grid-based games)
+  - `Velocity { float dx, dy; }` for smooth movement
+  - `Acceleration { float dx, dy; }` for physics-based motion
+  - Grid-based movement components
 - [ ] **Rendering Components**
   - `Sprite { TextureID texture; int width, height; }`
   - `Color { uint8_t r, g, b, a; }`
@@ -197,7 +201,7 @@ LOG_ERROR("Renderer", "Failed to load texture: {}", filename);
 ## 📈 Metrics and Success Tracking
 
 ### **Technical Metrics**
-- Test coverage: Currently 79 passing tests
+- Test coverage: Currently 120 passing tests (95 ECS + 15 Logging + 10 Systems)
 - Build time: Target <10 seconds for incremental builds
 - Frame rate: Target 60 FPS for simple scenes
 
