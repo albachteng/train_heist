@@ -125,12 +125,13 @@ make clean    # Clean all build artifacts
 
 The engine follows a strict modular ECS architecture:
 
-1. **ECS Core** (`engine/ecs/`): Entity/component management with bitmask-based queries
-2. **Rendering** (`engine/rendering/`): Sprite/tile rendering with OpenGL and SFML *(planned)*
-3. **Physics** (`engine/physics/`): Movement, collisions, and grid alignment *(planned)*
-4. **Input** (`engine/input/`): User input mapping to game events *(planned)*
-5. **Resources** (`engine/resources/`): Asset loading and management *(planned)*
-6. **Utils** (`engine/utils/`): Shared utilities and helper functions *(planned)*
+1. **ECS Core** (`engine/ecs/`): Entity/component management with bitmask-based queries ✅ **IMPLEMENTED**
+2. **Systems Layer** (`engine/ecs/systems/`): Priority-based system execution with dependency injection ✅ **IMPLEMENTED**
+3. **Rendering** (`engine/rendering/`): Sprite/tile rendering with OpenGL and SFML *(planned)*
+4. **Physics** (`engine/physics/`): Movement, collisions, and grid alignment *(planned)*
+5. **Input** (`engine/input/`): User input mapping to game events *(planned)*
+6. **Resources** (`engine/resources/`): Asset loading and management *(planned)*
+7. **Utils** (`engine/utils/`): Shared utilities and helper functions *(planned)*
 
 ### Key Design Principles
 
@@ -164,7 +165,9 @@ The following libraries are included as git submodules and built from source:
 
 ### Current Implementation Status
 
-The ECS core is **fully implemented** with comprehensive test coverage (63 passing tests). The EntityManager uses a mark-dead-and-reuse approach for efficient entity lifecycle management.
+The ECS core and systems layer are **fully implemented** with comprehensive test coverage (79 passing tests). The EntityManager uses a mark-dead-and-reuse approach for efficient entity lifecycle management.
+
+**Development Progress**: See [ROADMAP.md](ROADMAP.md) for current development plan, progress tracking, and next milestones.
 
 ### Getting Started
 
@@ -224,7 +227,7 @@ See `GAME_DESIGN.md` for detailed game mechanics and design decisions.
 The project uses a comprehensive test-driven development approach:
 
 ```bash
-make test    # Run all ECS unit tests (currently 63 tests)
+make test    # Run all ECS unit tests (currently 79 tests)
 ```
 
 ### Test Organization
@@ -236,6 +239,7 @@ make test    # Run all ECS unit tests (currently 63 tests)
 ## Documentation
 
 - **`README.md`** - This file, setup and getting started guide
+- **`ROADMAP.md`** - Development roadmap, progress tracking, and next steps
 - **`CLAUDE.md`** - AI assistant guidance and architectural overview
 - **`DESIGN.md`** - High-level project design decisions
 - **`GAME_DESIGN.md`** - Game mechanics and design philosophy

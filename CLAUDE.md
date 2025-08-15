@@ -52,7 +52,11 @@ The engine follows a strict modular ECS architecture with these systems:
 ## Development Workflow
 
 ### Current Implementation Status
-The ECS core is implemented with comprehensive test coverage. Future development should follow these patterns:
+The ECS core and systems layer are fully implemented with comprehensive test coverage (79 passing tests).
+
+**Development Progress**: See [ROADMAP.md](ROADMAP.md) for current development plan, phase tracking, and next steps.
+
+Future development should follow these patterns:
 
 1. **Start with headers first** - Define component structs and system interfaces in `include/` directories
 2. **Write tests before implementation** - Create unit tests in module `tests/` directories
