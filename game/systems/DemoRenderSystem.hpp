@@ -2,6 +2,8 @@
 
 #include "../../engine/ecs/systems/include/ISystem.hpp"
 #include "../../engine/ecs/systems/include/IRenderer.hpp"
+#include "../../engine/input/include/InputComponents.hpp"
+#include "../../engine/ecs/components/include/TransformComponents.hpp"
 
 /**
  * DemoRenderSystem - Simple demo system for Track 1 validation

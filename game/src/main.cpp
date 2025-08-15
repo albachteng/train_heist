@@ -7,6 +7,10 @@
 #include "../../engine/ecs/systems/include/SystemManager.hpp"
 #include "../../engine/logging/include/Logger.hpp"
 #include "../../engine/rendering/include/SFMLRenderer.hpp"
+#include "../../engine/input/include/SFMLInputManager.hpp"
+#include "../../engine/input/include/InputSystem.hpp"
+#include "../../engine/input/include/InputComponents.hpp"
+#include "../../engine/ecs/components/include/TransformComponents.hpp"
 
 // Game includes
 #include "../systems/DemoRenderSystem.hpp"
@@ -40,14 +44,35 @@ int main() {
     ECS::EntityManager entityManager;
     ECS::SystemManager systemManager;
     
-    // Initialize renderer
+    // Initialize renderer and input manager
     ECS::SFMLRenderer renderer(window);
+    ECS::SFMLInputManager inputManager(window);
     
-    // Register demo rendering system
+    // Register input system (high priority - processes input first)
+    auto inputSystem = std::make_unique<ECS::InputSystem>(&inputManager);
+    systemManager.registerSystem(std::move(inputSystem));
+    
+    // Register demo rendering system  
     auto demoSystem = std::make_unique<DemoRenderSystem>(&renderer);
     systemManager.registerSystem(std::move(demoSystem));
     
-    LOG_INFO("Game", "Initialized ECS managers and rendering system");
+    // Create a controllable demo entity
+    auto playerEntity = entityManager.createEntity();
+    entityManager.addComponent<ECS::InputHandler>(playerEntity, {});
+    entityManager.addComponent<ECS::InputState>(playerEntity, {});
+    entityManager.addComponent<ECS::Controllable>(playerEntity, {});
+    
+    // Add position at center of screen
+    ECS::Position playerPos{};
+    playerPos.x = WINDOW_WIDTH / 2.0f;
+    playerPos.y = WINDOW_HEIGHT / 2.0f;
+    playerPos.z = 0.0f;
+    entityManager.addComponent<ECS::Position>(playerEntity, playerPos);
+    
+    LOG_INFO("Game", "Created controllable entity {} at position ({}, {})", 
+             playerEntity.id, playerPos.x, playerPos.y);
+    
+    LOG_INFO("Game", "Initialized ECS managers, input system, and rendering system");
     
     // Basic game state
     bool running = true;
@@ -61,6 +86,9 @@ int main() {
         
         // Handle window events
         while (const std::optional<sf::Event> event = window.pollEvent()) {
+            // Pass events to input manager for processing
+            inputManager.processEvent(*event);
+            
             if (event->is<sf::Event::Closed>()) {
                 running = false;
                 LOG_INFO("Game", "Window close event received");
