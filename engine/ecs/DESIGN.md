@@ -28,10 +28,11 @@ ecs/
 │   └─ EventTests.cpp
 
 ## Entities
-- Represented by simple `EntityID` (uint32_t) with optional generation counter.
+- Represented by simple `EntityID` (uint32_t) with generation counter for reuse safety.
 - Each entity has a **bitmask** tracking which components are present.
 - Supports efficient multi-component queries via bitwise AND.
 - **EntityHandle** provides safe external references without exposing internal ECS state.
+- **Mark-dead-and-reuse lifecycle**: Entities are marked dead but remain in storage for efficient reuse.
 
 ```cpp
 using EntityID = uint32_t;
@@ -51,6 +52,53 @@ struct EntityHandle {
     // API encapsulation: forces validation through ECS manager entry points
 };
 ```
+
+## Entity Management
+
+The EntityManager implements a **mark-dead-and-reuse** approach that balances performance with memory efficiency:
+
+### Core Architecture
+- **Indexed storage**: All entities stored in `std::vector<Entity>` indexed by entity ID
+- **Alive tracking**: `std::vector<bool> alive` tracks which entity slots are active
+- **Generation counters**: Each entity ID has a generation that increments on reuse
+- **Free ID queue**: `std::queue<EntityID> freeIds` maintains pool of reusable IDs
+
+### Lifecycle Operations
+```cpp
+// Entity creation - reuses dead slots or creates new ones
+Entity entity = entityManager.createEntity();
+
+// Entity destruction - marks dead but keeps in storage
+entityManager.destroyEntity(entity);
+
+// Validation - checks generation matches current
+bool valid = entityManager.isValid(entity);
+
+// Lookup - returns current entity or nullptr if dead
+Entity* current = entityManager.getEntityByID(entityId);
+```
+
+### System Iteration Pattern
+```cpp
+// Systems iterate over all entities (including dead ones)
+for (const Entity& entity : entityManager.getAllEntitiesForIteration()) {
+    if (!entityManager.isValid(entity)) {
+        continue; // Skip dead entities
+    }
+    
+    // Process only living entities with required components
+    if ((entity.componentMask & requiredMask) == requiredMask) {
+        // Update entity...
+    }
+}
+```
+
+### Performance Characteristics
+- **Entity creation**: O(1) with dead slot reuse, O(1) amortized for new slots
+- **Entity destruction**: O(1) mark as dead, add to free queue
+- **Entity validation**: O(1) array lookup with generation check
+- **Memory growth**: Grows with peak entity count, never shrinks
+- **Cache performance**: Entities stored contiguously for system iteration
 
 ## Components
 - Plain Old Data (POD) structs.
@@ -287,6 +335,18 @@ void MovementSystem(ComponentArray<Position>& positions,
 - **ZII compliance** → safe defaults, predictable behavior, and optimal memory layout.
 - **Component registry** → eliminates manual bit management overhead.
 - **Static assertions** → compile-time validation prevents runtime errors.
+
+## Threading Considerations
+**TODO**: EntityManager currently uses a mark-dead-and-reuse approach for entity lifecycle management, which has specific threading implications:
+
+- **Current State**: Single-threaded design with no thread safety
+- **Planned Threading Strategy**: Coarse-grained locking (single mutex protecting EntityManager operations)
+- **Advantages of mark-dead-and-reuse for threading**:
+  - Stable memory layout (dead entities stay in storage)
+  - Entity pointers remain valid longer
+  - No memory compaction during iteration
+  - Read-heavy operations can use reader-writer locks
+- **Implementation Priority**: Add threading support after core ECS functionality is complete
 
 ## Notes
 - ECS is **agnostic to rendering** (SFML/OpenGL handled in a separate rendering system).

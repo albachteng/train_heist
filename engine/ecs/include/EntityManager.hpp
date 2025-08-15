@@ -20,8 +20,9 @@ namespace ECS {
  */
 class EntityManager {
 private:
-    std::vector<Entity> entities;           // Dense storage of active entities
-    std::vector<uint32_t> generations;      // Generation counter for each entity ID (indexed by ID)
+    std::vector<Entity> entities;           // All entities (including dead ones) - indexed by ID
+    std::vector<uint32_t> generations;      // Generation counter for each entity ID (indexed by ID) 
+    std::vector<bool> alive;               // Tracks which entity slots are alive (indexed by ID)
     std::queue<EntityID> freeIds;          // Pool of reusable entity IDs
     EntityID nextId = 1;                   // Next available entity ID (0 reserved for INVALID_ENTITY)
     
@@ -67,9 +68,35 @@ public:
     const Entity* getEntity(const EntityHandle& handle) const;
     
     /**
-     * Get total number of active entities
+     * Get total number of active (living) entities
      */
     size_t getActiveEntityCount() const;
+    
+    /**
+     * Get total number of entities including dead ones (total storage used)
+     */
+    size_t getTotalEntityCount() const;
+    
+    /**
+     * Get number of dead entities available for reuse
+     */
+    size_t getDeadEntityCount() const;
+    
+    /**
+     * Check if an entity slot is alive (not necessarily valid - use isValid for full validation)
+     */
+    bool isAlive(EntityID entityId) const;
+    
+    /**
+     * Get entity by ID (returns current generation entity or nullptr if dead)
+     */
+    Entity* getEntityByID(EntityID entityId);
+    const Entity* getEntityByID(EntityID entityId) const;
+    
+    /**
+     * Get all entities for system iteration (includes dead entities that systems should skip)
+     */
+    std::vector<Entity> getAllEntitiesForIteration() const;
     
     /**
      * Clear all entities (for testing/reset)

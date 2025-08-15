@@ -45,8 +45,9 @@ The engine follows a strict modular ECS architecture with these systems:
 2. **Systems are stateless functions** - Operate on component arrays via bitmask queries
 3. **Struct-of-Arrays (SoA) storage** - Cache-friendly component layout in memory arenas
 4. **Bitmask-based queries** - Efficient multi-component filtering with branch-free operations
-5. **Typed events** - `Event<T>` system for decoupled, type-safe communication
-6. **TDD approach** - Tests and headers written before implementation
+5. **Mark-dead-and-reuse entities** - Entities are marked as dead but remain in storage for efficient reuse with generation counters
+6. **Typed events** - `Event<T>` system for decoupled, type-safe communication
+7. **TDD approach** - Tests and headers written before implementation
 
 ## Development Workflow
 
@@ -90,6 +91,27 @@ Systems should be:
 - Testable in isolation without dependencies
 - Query components via bitmask filtering: `(entity.componentMask & requiredMask) == requiredMask`
 - Communicate through typed `Event<T>` payloads
+
+### EntityManager Architecture
+The EntityManager uses a **mark-dead-and-reuse** approach for entity lifecycle management:
+
+**Key Features:**
+- **Stable memory layout**: Dead entities remain in storage, entity pointers stay valid longer
+- **Generation-based safety**: Each entity ID has a generation counter that increments on reuse
+- **Efficient reuse**: O(1) entity ID reuse via free ID queue
+- **System-friendly iteration**: `getAllEntitiesForIteration()` includes dead entities that systems should skip
+
+**Core Methods:**
+- `createEntity()` - Reuses dead entity slots with incremented generations, or creates new slots
+- `destroyEntity()` - Marks entities as dead but keeps them in storage
+- `isValid()` - Checks entity generation matches current generation for that ID
+- `isAlive()` - Quick check if entity slot is alive (used during system iteration)
+- `getEntityByID()` - Returns current generation entity or nullptr if dead
+
+**Memory Behavior:**
+- Storage grows with peak entity count but never shrinks
+- Perfect for turn-based games with low entity churn
+- Thread-safe with planned coarse-grained locking (single mutex)
 
 ### Memory Management Strategy
 - Use memory arenas for component allocation

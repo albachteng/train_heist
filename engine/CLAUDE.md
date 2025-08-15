@@ -10,12 +10,12 @@ This is a lightweight, ECS-driven 2D/2.5D isometric game engine written in C++. 
 
 The engine follows a modular ECS (Entity-Component-System) architecture with these core systems:
 
-- **ECS Core** (`ecs/`): Entity/component management with bitmask tracking for efficient queries
-- **Input System** (`input/`): User input mapping to game events
-- **Physics System** (`physics/`): Movement, collisions, and grid alignment 
-- **Rendering System** (`rendering/`): Sprite/tile drawing and camera transforms
-- **Resources System** (`resources/`): Asset loading and management
-- **Utils** (`utils/`): Shared utilities and helper functions
+- **ECS Core** (`ecs/`): Entity/component management with bitmask tracking for efficient queries ✅ **IMPLEMENTED**
+- **Input System** (`input/`): User input mapping to game events *(planned)*
+- **Physics System** (`physics/`): Movement, collisions, and grid alignment *(planned)*
+- **Rendering System** (`rendering/`): Sprite/tile drawing and camera transforms *(planned)*
+- **Resources System** (`resources/`): Asset loading and management *(planned)*
+- **Utils** (`utils/`): Shared utilities and helper functions *(planned)*
 
 ## Key Design Principles
 
@@ -29,13 +29,14 @@ The engine follows a modular ECS (Entity-Component-System) architecture with the
 
 ## Development Workflow
 
-Since this is a greenfield project with no code yet:
+The ECS core is fully implemented with comprehensive test coverage (63 passing tests). For future engine systems:
 
 1. **Start with headers** - Define component structs and system interfaces in `include/` directories
 2. **Write tests first** - Create unit tests in `tests/` directories before implementation  
 3. **Implement in isolation** - Each system should be independently testable
 4. **Follow SoA patterns** - Store components in arrays, not as object members
 5. **Use bitmasks for queries** - Entity bitmasks indicate component presence
+6. **Follow existing ECS patterns** - Reference the implemented ECS core for architectural consistency
 
 ## Module Structure
 
