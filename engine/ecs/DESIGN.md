@@ -296,6 +296,52 @@ movementEvents.process([&](const Event<MovementPayload>& event) {
 });
 ```
 
+## Systems Architecture
+
+### System Interface
+Systems implement `ISystem` and receive dependencies via parameter injection:
+
+```cpp
+class ISystem {
+public:
+    virtual void update(float deltaTime, EntityManager& entityManager) = 0;
+    virtual uint64_t getRequiredComponents() const = 0;
+    virtual int getPriority() const { return 1000; }
+    virtual bool shouldUpdate(float deltaTime) const { return true; }
+};
+```
+
+### SystemManager
+Manages system registration, priority-based execution, and dependency injection:
+
+```cpp
+// Registration
+systemManager.registerSystem(std::make_unique<MovementSystem>());
+
+// Execution (EntityManager injected at call time)
+systemManager.updateAll(deltaTime, entityManager);
+```
+
+**Key Features:**
+- **Priority-based execution**: Lower priority values execute first
+- **Conditional updates**: Systems can skip frames via `shouldUpdate()`
+- **Dependency injection**: EntityManager passed as parameter for loose coupling
+- **Independent testing**: Systems can be tested with isolated EntityManagers
+
+### System Utilities
+Helper functions for common ECS operations:
+
+```cpp
+// Iterate entities with required components
+SystemUtils::forEachEntity(entityManager, positionMask | velocityMask, 
+    [](const Entity& entity) {
+        // Process entity
+    });
+
+// Count matching entities
+size_t count = SystemUtils::countEntitiesWithComponents(entityManager, movableMask);
+```
+
 ## Iteration / Queries
 - Multi-component queries performed via bitmask filtering (branch-free where possible).
 - Optional helper templates provide filtered views over component arrays.

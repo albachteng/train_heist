@@ -11,7 +11,8 @@ This is a lightweight, ECS-driven 2D/2.5D isometric game engine written in C++. 
 The engine follows a modular ECS (Entity-Component-System) architecture with these core systems:
 
 - **ECS Core** (`ecs/`): Entity/component management with bitmask tracking for efficient queries ✅ **IMPLEMENTED**
-- **Input System** (`input/`): User input mapping to game events *(planned)*
+- **Systems Layer** (`ecs/systems/`): Priority-based system execution with dependency injection ✅ **IMPLEMENTED**
+- **Input System** (`input/`): User input mapping to game events *(planned - interface ready)*
 - **Physics System** (`physics/`): Movement, collisions, and grid alignment *(planned)*
 - **Rendering System** (`rendering/`): Sprite/tile drawing and camera transforms *(planned)*
 - **Resources System** (`resources/`): Asset loading and management *(planned)*
@@ -26,10 +27,11 @@ The engine follows a modular ECS (Entity-Component-System) architecture with the
 5. **Memory arenas** - Fast allocation and swap-remove operations
 6. **TDD approach** - Tests and headers written before implementation
 7. **Typed events** - `Event<T>` system for decoupled communication
+8. **Dependency injection** - Systems receive EntityManager as parameter for testability
 
 ## Development Workflow
 
-The ECS core is fully implemented with comprehensive test coverage (63 passing tests). For future engine systems:
+The ECS core and systems layer are fully implemented with comprehensive test coverage (79 passing tests). For future engine systems:
 
 1. **Start with headers** - Define component structs and system interfaces in `include/` directories
 2. **Write tests first** - Create unit tests in `tests/` directories before implementation  
