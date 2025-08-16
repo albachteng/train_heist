@@ -1,58 +1,53 @@
 #include "../include/MockRenderer.hpp"
+#include <algorithm>
 
 namespace ECS {
 
-// Stub implementations that will cause tests to fail (Red phase)
-
 void MockRenderer::beginFrame() {
-    // TODO: Record method call
+    methodCalls.push_back("beginFrame");
 }
 
 void MockRenderer::endFrame() {
-    // TODO: Record method call
+    methodCalls.push_back("endFrame");
 }
 
 void MockRenderer::clear() {
-    // TODO: Record method call
+    methodCalls.push_back("clear");
 }
 
 void MockRenderer::renderSprite(float x, float y, float z, float width, float height, int textureId) {
-    // TODO: Record sprite call
-    (void)x; (void)y; (void)z; (void)width; (void)height; (void)textureId; // Suppress warnings
+    spriteCalls.push_back({x, y, z, width, height, textureId});
+    methodCalls.push_back("renderSprite");
 }
 
 void MockRenderer::renderRect(float x, float y, float width, float height,
                              float red, float green, float blue, float alpha) {
-    // TODO: Record rect call
-    (void)x; (void)y; (void)width; (void)height; // Suppress warnings
-    (void)red; (void)green; (void)blue; (void)alpha;
+    rectCalls.push_back({x, y, width, height, red, green, blue, alpha});
+    methodCalls.push_back("renderRect");
 }
 
 void MockRenderer::getScreenSize(int& width, int& height) const {
-    // TODO: Return mock screen size
-    width = 0;
-    height = 0;
+    width = screenWidth;
+    height = screenHeight;
 }
 
 void MockRenderer::reset() {
-    // TODO: Clear all recorded calls
+    rectCalls.clear();
+    spriteCalls.clear();
+    methodCalls.clear();
 }
 
 size_t MockRenderer::getCallCount(const std::string& methodName) const {
-    // TODO: Count method calls
-    (void)methodName; // Suppress warning
-    return 0;
+    return std::count(methodCalls.begin(), methodCalls.end(), methodName);
 }
 
 bool MockRenderer::wasMethodCalled(const std::string& methodName) const {
-    // TODO: Check if method was called
-    (void)methodName; // Suppress warning
-    return false;
+    return std::find(methodCalls.begin(), methodCalls.end(), methodName) != methodCalls.end();
 }
 
 void MockRenderer::setScreenSize(int width, int height) {
-    // TODO: Set mock screen size
-    (void)width; (void)height; // Suppress warnings
+    screenWidth = width;
+    screenHeight = height;
 }
 
 } // namespace ECS

@@ -16,6 +16,9 @@ namespace ECS {
  */
 class MockRenderer : public IRenderer {
 public:
+    // Constructor to ensure proper initialization
+    MockRenderer() : screenWidth(800), screenHeight(600) {}
+    
     // Call recording structures (stubs - will be implemented)
     struct RectCall {
         float x, y, width, height;
@@ -41,11 +44,16 @@ public:
                    float red, float green, float blue, float alpha = 1.0f) override;
     void getScreenSize(int& width, int& height) const override;
     
-    // Test utility methods (stubs)
+    // Test utility methods
     void reset();
     size_t getCallCount(const std::string& methodName) const;
     bool wasMethodCalled(const std::string& methodName) const;
     void setScreenSize(int width, int height);
+
+private:
+    // Mock screen size
+    int screenWidth = 800;
+    int screenHeight = 600;
 };
 
 } // namespace ECS
