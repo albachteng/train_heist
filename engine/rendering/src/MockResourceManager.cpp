@@ -11,40 +11,69 @@ MockResourceManager::MockResourceManager()
 TextureHandle MockResourceManager::loadTexture(const std::string& filePath) {
     methodCalls.push_back("loadTexture");
     
-    // STUB: Will cause test failures in RED phase
-    (void)filePath;
-    return INVALID_TEXTURE;
+    // Check if configured to fail
+    if (loadFailureMode) {
+        LoadTextureCall call{filePath, INVALID_TEXTURE};
+        loadTextureCalls.push_back(call);
+        return INVALID_TEXTURE;
+    }
+    
+    // Use configured result if set
+    TextureHandle handle = (nextLoadResult != INVALID_TEXTURE) ? nextLoadResult : nextHandle++;
+    
+    // Store the loaded texture
+    loadedTextures[handle] = filePath;
+    
+    // Record the call
+    LoadTextureCall call{filePath, handle};
+    loadTextureCalls.push_back(call);
+    
+    // Reset configured result
+    nextLoadResult = INVALID_TEXTURE;
+    
+    return handle;
 }
 
 bool MockResourceManager::isTextureValid(TextureHandle handle) const {
-    // STUB: Will cause test failures in RED phase  
-    (void)handle;
-    return false;
+    return loadedTextures.find(handle) != loadedTextures.end();
 }
 
 std::string MockResourceManager::getTexturePath(TextureHandle handle) const {
-    // STUB: Will cause test failures in RED phase
-    (void)handle;
-    return "";
+    auto it = loadedTextures.find(handle);
+    return (it != loadedTextures.end()) ? it->second : "";
 }
 
 bool MockResourceManager::unloadTexture(TextureHandle handle) {
     methodCalls.push_back("unloadTexture");
     
-    // STUB: Will cause test failures in RED phase
-    (void)handle;
-    return false;
+    // Check if texture exists
+    auto it = loadedTextures.find(handle);
+    bool exists = (it != loadedTextures.end());
+    
+    bool success = exists && nextUnloadResult;
+    
+    if (success) {
+        loadedTextures.erase(it);
+    }
+    
+    // Record the call
+    UnloadTextureCall call{handle, success};
+    unloadTextureCalls.push_back(call);
+    
+    // Reset configured result for next call
+    nextUnloadResult = true;
+    
+    return success;
 }
 
 size_t MockResourceManager::getLoadedTextureCount() const {
-    // STUB: Will cause test failures in RED phase
-    return 0;
+    return loadedTextures.size();
 }
 
 void MockResourceManager::clearAllTextures() {
     methodCalls.push_back("clearAllTextures");
     
-    // STUB: Will cause test failures in RED phase - doesn't clear anything
+    loadedTextures.clear();
 }
 
 void MockResourceManager::reset() {
