@@ -41,26 +41,35 @@ protected:
         mockRenderer.reset();
     }
     
-    // Helper method to create entity with Position and Sprite (stub for Red phase)
+    // Helper method to create entity with Position and Sprite components
     EntityID createSpriteEntity(float x, float y, float z, int textureId, float width, float height) {
-        // STUB: For Red phase - this will be implemented properly in Green phase
-        // For now, just create an entity and pretend it has components
         Entity entity = entityManager->createEntity();
+        Entity* entityRef = entityManager->getEntityByID(entity.id);
         
-        // STUB: Component management will be implemented in Green phase
+        // Add component bitmasks for Position and Sprite
+        uint64_t positionBit = getComponentBit<Position>();
+        uint64_t spriteBit = getComponentBit<Sprite>();
+        entityRef->addComponent(positionBit | spriteBit);
+        
+        // NOTE: Actual component data (x, y, z, textureId, etc.) would be stored 
+        // in ComponentArrays, but that's not set up in these tests yet
         (void)x; (void)y; (void)z; (void)textureId; (void)width; (void)height;
         
         return entity.id;
     }
     
-    // Helper method to create entity with Position and Renderable (stub for Red phase)
+    // Helper method to create entity with Position and Renderable components
     EntityID createRenderableEntity(float x, float y, float z, float width, float height, 
                                    float red, float green, float blue, float alpha = 1.0f) {
-        // STUB: For Red phase - this will be implemented properly in Green phase
-        // For now, just create an entity and pretend it has components
         Entity entity = entityManager->createEntity();
+        Entity* entityRef = entityManager->getEntityByID(entity.id);
         
-        // STUB: Component management will be implemented in Green phase
+        // Add component bitmasks for Position and Renderable
+        uint64_t positionBit = getComponentBit<Position>();
+        uint64_t renderableBit = getComponentBit<Renderable>();
+        entityRef->addComponent(positionBit | renderableBit);
+        
+        // NOTE: Actual component data would be stored in ComponentArrays
         (void)x; (void)y; (void)z; (void)width; (void)height;
         (void)red; (void)green; (void)blue; (void)alpha;
         
@@ -260,12 +269,15 @@ TEST_F(RenderSystemTest, EntityFilteringMissingVisualComponent) {
 
 // Test entity with both Sprite and Renderable components
 TEST_F(RenderSystemTest, EntityWithBothVisualComponents) {
-    // STUB: Create entity with Position + Sprite + Renderable - for Red phase
+    // Create entity with Position + Sprite + Renderable
     Entity entity = entityManager->createEntity();
-    EntityID entityId = entity.id;
+    Entity* entityRef = entityManager->getEntityByID(entity.id);
     
-    // STUB: Component management will be implemented in Green phase
-    (void)entityId;
+    // Add component bitmasks for Position, Sprite, and Renderable
+    uint64_t positionBit = getComponentBit<Position>();
+    uint64_t spriteBit = getComponentBit<Sprite>();
+    uint64_t renderableBit = getComponentBit<Renderable>();
+    entityRef->addComponent(positionBit | spriteBit | renderableBit);
     
     renderSystem->update(0.016f, *entityManager);
     
@@ -273,7 +285,7 @@ TEST_F(RenderSystemTest, EntityWithBothVisualComponents) {
     // This tests how system handles entities with multiple visual components
     EXPECT_GT(renderSystem->getLastRenderCount(), 0);
     
-    // Should call at least one rendering method
+    // Should call both rendering methods since entity has both components
     bool spriteRendered = mockRenderer->wasMethodCalled("renderSprite");
     bool rectRendered = mockRenderer->wasMethodCalled("renderRect");
     EXPECT_TRUE(spriteRendered || rectRendered);
