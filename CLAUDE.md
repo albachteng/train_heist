@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+**CRITICAL: After the red phase, you must always pause and wait for my approval before moving forward with implementation.**
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
