@@ -75,13 +75,13 @@ TEST_F(RenderingTest, SpriteNegativeValues) {
 TEST_F(RenderingTest, RenderableDefaultConstruction) {
     Renderable renderable;
     
-    // ZII compliance - dimensions and RGB should be zero, alpha should be 1.0 (opaque)
+    // ZII compliance - all values should be zero-initialized (including alpha = transparent)
     EXPECT_FLOAT_EQ(renderable.width, 0.0f);
     EXPECT_FLOAT_EQ(renderable.height, 0.0f);
     EXPECT_FLOAT_EQ(renderable.red, 0.0f);
     EXPECT_FLOAT_EQ(renderable.green, 0.0f);
     EXPECT_FLOAT_EQ(renderable.blue, 0.0f);
-    EXPECT_FLOAT_EQ(renderable.alpha, 1.0f);  // Default to opaque
+    EXPECT_FLOAT_EQ(renderable.alpha, 0.0f);  // ZII = transparent (invisible by default)
 }
 
 TEST_F(RenderingTest, RenderableValueConstruction) {
@@ -105,15 +105,15 @@ TEST_F(RenderingTest, RenderableEquality) {
 }
 
 TEST_F(RenderingTest, RenderablePartialInitialization) {
-    // Test that we can initialize just dimensions
-    Renderable renderable{25.0f, 35.0f};  // Only width/height, colors should default
+    // Test that we can initialize just dimensions (colors default to zero, alpha = transparent)
+    Renderable renderable{25.0f, 35.0f};  // Only width/height, colors and alpha should default to zero
     
     EXPECT_FLOAT_EQ(renderable.width, 25.0f);
     EXPECT_FLOAT_EQ(renderable.height, 35.0f);
     EXPECT_FLOAT_EQ(renderable.red, 0.0f);
     EXPECT_FLOAT_EQ(renderable.green, 0.0f);
     EXPECT_FLOAT_EQ(renderable.blue, 0.0f);
-    EXPECT_FLOAT_EQ(renderable.alpha, 1.0f);
+    EXPECT_FLOAT_EQ(renderable.alpha, 0.0f);  // ZII = transparent
 }
 
 TEST_F(RenderingTest, RenderableColorRange) {
@@ -154,7 +154,7 @@ TEST_F(RenderingTest, ComponentRegistryIntegration) {
 
 // Test ZII compliance (Zero Is Initialization)
 TEST_F(RenderingTest, ZIICompliance) {
-    // Test that zero-initialized components are valid
+    // Test that zero-initialized components are valid and fully ZII compliant
     Sprite zeroSprite{};
     Renderable zeroRenderable{};
     
@@ -163,13 +163,13 @@ TEST_F(RenderingTest, ZIICompliance) {
     EXPECT_EQ(zeroSprite.width, 0.0f);
     EXPECT_EQ(zeroSprite.height, 0.0f);
     
-    // Zero renderables should be valid (invisible colored shape, but alpha=1.0)
+    // Zero renderables should be fully zero-initialized (invisible due to alpha=0.0)
     EXPECT_EQ(zeroRenderable.width, 0.0f);
     EXPECT_EQ(zeroRenderable.height, 0.0f);
     EXPECT_EQ(zeroRenderable.red, 0.0f);
     EXPECT_EQ(zeroRenderable.green, 0.0f);
     EXPECT_EQ(zeroRenderable.blue, 0.0f);
-    EXPECT_EQ(zeroRenderable.alpha, 1.0f);  // Opaque by default
+    EXPECT_EQ(zeroRenderable.alpha, 0.0f);  // ZII = transparent (invisible by default)
 }
 
 // Test typical usage patterns
@@ -190,7 +190,7 @@ TEST_F(RenderingTest, TypicalSpriteUsage) {
 }
 
 TEST_F(RenderingTest, TypicalRenderableUsage) {
-    // Red debug rectangle
+    // Red debug rectangle (explicitly visible)
     Renderable debugRect{10.0f, 10.0f, 1.0f, 0.0f, 0.0f, 0.8f};  // Semi-transparent red
     
     EXPECT_FLOAT_EQ(debugRect.width, 10.0f);
@@ -200,7 +200,7 @@ TEST_F(RenderingTest, TypicalRenderableUsage) {
     EXPECT_FLOAT_EQ(debugRect.blue, 0.0f);
     EXPECT_FLOAT_EQ(debugRect.alpha, 0.8f);
     
-    // Green health bar background
+    // Green health bar background (explicitly opaque)
     Renderable healthBar{100.0f, 8.0f, 0.0f, 0.8f, 0.0f, 1.0f};  // Opaque green
     
     EXPECT_FLOAT_EQ(healthBar.width, 100.0f);
@@ -209,6 +209,41 @@ TEST_F(RenderingTest, TypicalRenderableUsage) {
     EXPECT_FLOAT_EQ(healthBar.green, 0.8f);
     EXPECT_FLOAT_EQ(healthBar.blue, 0.0f);
     EXPECT_FLOAT_EQ(healthBar.alpha, 1.0f);
+    
+    // Invisible placeholder (ZII default behavior)
+    Renderable placeholder{50.0f, 25.0f};  // Dimensions set, but alpha=0.0 (invisible)
+    
+    EXPECT_FLOAT_EQ(placeholder.width, 50.0f);
+    EXPECT_FLOAT_EQ(placeholder.height, 25.0f);
+    EXPECT_FLOAT_EQ(placeholder.alpha, 0.0f);  // Invisible by default (ZII)
+}
+
+// Test ZII behavior and common visibility patterns
+TEST_F(RenderingTest, ZIIVisibilityPatterns) {
+    // Test the ZII transparency behavior with practical examples
+    
+    // Default construction creates invisible renderable
+    Renderable invisible;
+    EXPECT_FLOAT_EQ(invisible.alpha, 0.0f);
+    
+    // Partial initialization still results in invisible renderable
+    Renderable partiallyInitialized{100.0f, 50.0f, 1.0f, 0.0f, 0.0f}; // Red color, but no alpha
+    EXPECT_FLOAT_EQ(partiallyInitialized.red, 1.0f);
+    EXPECT_FLOAT_EQ(partiallyInitialized.alpha, 0.0f); // Still invisible
+    
+    // Explicit visibility patterns
+    Renderable fullyOpaque{100.0f, 50.0f, 1.0f, 0.0f, 0.0f, 1.0f};     // Explicit opaque
+    Renderable semiTransparent{100.0f, 50.0f, 0.0f, 1.0f, 0.0f, 0.5f}; // Explicit semi-transparent
+    Renderable explicitInvisible{100.0f, 50.0f, 0.0f, 0.0f, 1.0f, 0.0f}; // Explicit invisible
+    
+    EXPECT_FLOAT_EQ(fullyOpaque.alpha, 1.0f);
+    EXPECT_FLOAT_EQ(semiTransparent.alpha, 0.5f);
+    EXPECT_FLOAT_EQ(explicitInvisible.alpha, 0.0f);
+    
+    // All should have correct colors regardless of visibility
+    EXPECT_FLOAT_EQ(fullyOpaque.red, 1.0f);
+    EXPECT_FLOAT_EQ(semiTransparent.green, 1.0f);
+    EXPECT_FLOAT_EQ(explicitInvisible.blue, 1.0f);
 }
 
 // Test edge cases and robustness

@@ -205,3 +205,29 @@ TEST_F(MockRendererTest, PolymorphicUsage) {
     EXPECT_TRUE(mockRenderer->wasMethodCalled("beginFrame"));
     EXPECT_EQ(mockRenderer->rectCalls.size(), 1);
 }
+
+// Test call order verification methods
+TEST_F(MockRendererTest, CallOrderVerification) {
+    // Test correct sequence verification
+    mockRenderer->beginFrame();
+    mockRenderer->clear();
+    mockRenderer->endFrame();
+    
+    std::vector<std::string> correctSequence = {"beginFrame", "clear", "endFrame"};
+    EXPECT_TRUE(mockRenderer->verifyCallSequence(correctSequence));
+    
+    // Test incorrect sequence detection
+    std::vector<std::string> incorrectSequence = {"clear", "beginFrame", "endFrame"};
+    EXPECT_FALSE(mockRenderer->verifyCallSequence(incorrectSequence));
+    
+    // Test different length sequences
+    std::vector<std::string> shortSequence = {"beginFrame", "clear"};
+    EXPECT_FALSE(mockRenderer->verifyCallSequence(shortSequence));
+    
+    std::vector<std::string> longSequence = {"beginFrame", "clear", "endFrame", "clear"};
+    EXPECT_FALSE(mockRenderer->verifyCallSequence(longSequence));
+    
+    // Test getCallSequence returns the actual sequence
+    std::vector<std::string> actualSequence = mockRenderer->getCallSequence();
+    EXPECT_EQ(actualSequence, correctSequence);
+}

@@ -50,4 +50,22 @@ void MockRenderer::setScreenSize(int width, int height) {
     screenHeight = height;
 }
 
+std::vector<std::string> MockRenderer::getCallSequence() const {
+    return methodCalls;
+}
+
+bool MockRenderer::verifyCallSequence(const std::vector<std::string>& expectedSequence) const {
+    if (methodCalls.size() != expectedSequence.size()) {
+        return false;
+    }
+    
+    for (size_t i = 0; i < methodCalls.size(); ++i) {
+        if (methodCalls[i] != expectedSequence[i]) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 } // namespace ECS

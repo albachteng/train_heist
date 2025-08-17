@@ -59,6 +59,7 @@ protected:
     }
     
     // Helper method to create entity with Position and Renderable components
+    // NOTE: Default alpha=1.0f for test compatibility; actual Renderable component uses ZII (alpha=0.0f)
     EntityID createRenderableEntity(float x, float y, float z, float width, float height, 
                                    float red, float green, float blue, float alpha = 1.0f) {
         Entity entity = entityManager->createEntity();
@@ -142,9 +143,14 @@ TEST_F(RenderSystemTest, FrameLifecycle) {
     // Should call clear for screen clearing
     EXPECT_TRUE(mockRenderer->wasMethodCalled("clear"));
     
-    // Frame methods should be called in correct order
+    // Frame methods should be called in correct order: beginFrame → clear → endFrame
+    std::vector<std::string> expectedSequence = {"beginFrame", "clear", "endFrame"};
+    EXPECT_TRUE(mockRenderer->verifyCallSequence(expectedSequence));
+    
+    // Verify individual call counts
     EXPECT_EQ(mockRenderer->getCallCount("beginFrame"), 1);
     EXPECT_EQ(mockRenderer->getCallCount("endFrame"), 1);
+    EXPECT_EQ(mockRenderer->getCallCount("clear"), 1);
 }
 
 // Test empty scene handling
@@ -235,16 +241,17 @@ TEST_F(RenderSystemTest, MultipleEntityRendering) {
 
 // Test entity filtering - entities without Position should be ignored
 TEST_F(RenderSystemTest, EntityFilteringMissingPosition) {
-    // STUB: Create entity with only Sprite (no Position) - for Red phase
+    // Create entity with only Sprite component (no Position component)
     Entity entity = entityManager->createEntity();
-    EntityID entityId = entity.id;
+    Entity* entityRef = entityManager->getEntityByID(entity.id);
     
-    // STUB: Component management will be implemented in Green phase
-    (void)entityId;
+    // Add only Sprite component bitmask (missing Position)
+    uint64_t spriteBit = getComponentBit<Sprite>();
+    entityRef->addComponent(spriteBit);
     
     renderSystem->update(0.016f, *entityManager);
     
-    // Should not render entity without Position
+    // Should not render entity without Position component
     EXPECT_EQ(renderSystem->getLastRenderCount(), 0);
     EXPECT_FALSE(mockRenderer->wasMethodCalled("renderSprite"));
     EXPECT_FALSE(mockRenderer->wasMethodCalled("renderRect"));
@@ -252,16 +259,17 @@ TEST_F(RenderSystemTest, EntityFilteringMissingPosition) {
 
 // Test entity filtering - entities without visual components should be ignored  
 TEST_F(RenderSystemTest, EntityFilteringMissingVisualComponent) {
-    // STUB: Create entity with only Position (no Sprite or Renderable) - for Red phase
+    // Create entity with only Position component (no Sprite or Renderable components)
     Entity entity = entityManager->createEntity();
-    EntityID entityId = entity.id;
+    Entity* entityRef = entityManager->getEntityByID(entity.id);
     
-    // STUB: Component management will be implemented in Green phase
-    (void)entityId;
+    // Add only Position component bitmask (missing Sprite and Renderable)
+    uint64_t positionBit = getComponentBit<Position>();
+    entityRef->addComponent(positionBit);
     
     renderSystem->update(0.016f, *entityManager);
     
-    // Should not render entity without visual components
+    // Should not render entity without visual components (Sprite or Renderable)
     EXPECT_EQ(renderSystem->getLastRenderCount(), 0);
     EXPECT_FALSE(mockRenderer->wasMethodCalled("renderSprite"));
     EXPECT_FALSE(mockRenderer->wasMethodCalled("renderRect"));
