@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../ecs/systems/include/IRenderer.hpp"
+#include "IRenderer.hpp"
 #include <vector>
 #include <string>
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../ecs/systems/include/ISystem.hpp"
-#include "../../ecs/systems/include/IRenderer.hpp"
+#include "IRenderer.hpp"
 #include "../../ecs/include/EntityManager.hpp"
 
 namespace ECS {
