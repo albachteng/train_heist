@@ -1,6 +1,6 @@
 # Rendering Module Design
 
-## Current Architecture (v1 - MVP Implementation)
+## Current Architecture (v1 - SFML Integration Implementation)
 
 ### Goals
 - **Library-agnostic engine**: No SFML/OpenGL includes in core ECS/game logic
@@ -8,11 +8,37 @@
 - **Testability**: Mock implementations for unit/integration tests
 - **Composable design**: Clear separation between rendering, resource management, and ECS components
 
+### Design Decisions (Finalized 2025-01-17)
+
+**1. IRenderer Location**: ✅ **DECIDED**
+- **Decision**: Move `IRenderer` from `engine/ecs/systems/include/` to `engine/rendering/include/`
+- **Rationale**: Better module ownership - rendering interface belongs in rendering module
+- **Impact**: Update include statements in RenderSystem and tests
+
+**2. Resource Management**: ✅ **DECIDED** 
+- **Decision**: Implement ResourceManager from the beginning
+- **Approach**: Simple initial implementation with extensibility planning
+- **Interface**: ResourceManager handles texture loading, IRenderer consumes texture handles
+- **Benefits**: Clean separation of concerns, future optimization path
+
+**3. Window Management**: ✅ **DECIDED**
+- **Decision**: Separate WindowManager from SFMLRenderer
+- **Rationale**: Allows migration away from SFML without touching rendering logic
+- **Interface**: WindowManager owns sf::RenderWindow, SFMLRenderer receives render target
+- **Benefits**: Better abstraction, cleaner testing, future backend flexibility
+
+**4. Testing Strategy**: ✅ **DECIDED**
+- **Decision**: Keep unit-based testing for now, plan integration tests for future
+- **Approach**: Mock implementations for all interfaces (MockRenderer, MockResourceManager, MockWindowManager)
+- **Future**: Integration tests will be added in separate phase
+
 ### Current Module Organization
 
-**Interface Location:**
-- `engine/rendering/include/IRenderer.hpp` - Core rendering interface (TODO: move from engine/ecs/systems/include/)
-- `engine/ecs/components/` - Rendering components (Sprite, Position, etc.)
+**Interface Locations:**
+- `engine/rendering/include/IRenderer.hpp` - Core rendering interface ✅ **MOVED**
+- `engine/rendering/include/IResourceManager.hpp` - Resource management interface ✅ **NEW**
+- `engine/rendering/include/IWindowManager.hpp` - Window management interface ✅ **NEW**  
+- `engine/ecs/components/` - Rendering components (Sprite, Renderable, Position)
 
 **Current IRenderer Interface (MVP):**
 ```cpp
@@ -31,14 +57,28 @@ class IRenderer {
 - **Rendering systems** live in `engine/rendering/src/` (specific to rendering module)
 - **Resource management** will be separate ResourceManager (future implementation)
 
-### Dependencies & Boundaries
+### Architecture Overview
+
+**Component Dependencies:**
 ```
-Core ECS ← Rendering Components
+Core ECS ← Rendering Components (Sprite, Renderable, Position)
     ↑
-Rendering Systems ← IRenderer Interface ← Concrete Renderers (SFML, OpenGL, Mock)
+RenderSystem ← IRenderer Interface ← SFMLRenderer
+    ↑              ↑                      ↑
+    ↑              ↑                 IResourceManager ← ResourceManager
+    ↑              ↑                      ↑
+    ↑              ↑                 IWindowManager ← WindowManager
+    ↑              ↑                                      ↑
+    ↑              MockRenderer                      sf::RenderWindow
     ↑
-ResourceManager Interface ← Concrete Resource Managers
+SystemManager
 ```
+
+**Module Boundaries:**
+- **ECS Core**: No SFML dependencies, only component interfaces
+- **Rendering System**: Depends only on abstract interfaces
+- **SFML Implementation**: Contains all SFML imports and concrete implementations
+- **Testing Layer**: Mock implementations for all interfaces
 
 ## Future Evolution (v2+ - Performance & Features)
 
@@ -77,17 +117,22 @@ ResourceManager Interface ← Concrete Resource Managers
 
 ## Implementation Priorities
 
-### Phase 1 (Current): Basic Rendering
-- [x] IRenderer interface defined
-- [ ] MockRenderer for testing
-- [ ] Basic rendering components (Sprite, Renderable)
-- [ ] SFMLRenderer implementation
-- [ ] Simple RenderSystem using immediate API
+### Phase 1 (Current): SFML Integration
+- [x] IRenderer interface defined and moved to rendering module
+- [x] MockRenderer for testing with call order verification
+- [x] Basic rendering components (Sprite, Renderable) with ZII compliance
+- [x] RenderSystem with dependency injection and comprehensive tests
+- [ ] **RED PHASE**: IResourceManager interface and MockResourceManager tests
+- [ ] **RED PHASE**: IWindowManager interface and MockWindowManager tests  
+- [ ] **RED PHASE**: SFMLRenderer tests (unit-based, no actual SFML window)
+- [ ] **GREEN PHASE**: ResourceManager implementation
+- [ ] **GREEN PHASE**: WindowManager implementation  
+- [ ] **GREEN PHASE**: SFMLRenderer implementation
 
-### Phase 2 (Future): Resource Management
-- [ ] ResourceManager interface
-- [ ] Texture loading and management
-- [ ] Resource handle integration with IRenderer
+### Phase 2 (Next): Integration & Testing
+- [ ] Integration tests with actual SFML window
+- [ ] Main application demonstrating full stack
+- [ ] Performance benchmarking and optimization
 
 ### Phase 3 (Future): Performance
 - [ ] Batch rendering API

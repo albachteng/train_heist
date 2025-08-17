@@ -12,17 +12,20 @@ We're using a **two-track approach** that delivers value quickly while building 
 ## 📊 Current Status
 
 ### ✅ Completed (Phase 0: ECS Foundation)
-- **ECS Core**: Entity/component management with bitmask tracking
-- **Systems Layer**: Priority-based system execution with dependency injection  
-- **Event System**: Typed event queues for decoupled communication
-- **Component Registry**: Automatic bit assignment for component types
-- **SystemUtils**: Helper functions for common ECS operations
-- **Logging System**: Multi-level logging with console/file output and global macros
+- **ECS Core**: Entity/component management with bitmask tracking ✅ **COMPLETED**
+- **Systems Layer**: Priority-based system execution with dependency injection ✅ **COMPLETED**
+- **Event System**: Typed event queues for decoupled communication ✅ **COMPLETED**
+- **Component Registry**: Automatic bit assignment for component types ✅ **COMPLETED**
+- **SystemUtils**: Helper functions for common ECS operations ✅ **COMPLETED**
+- **Logging System**: Multi-level logging with console/file output and global macros ✅ **COMPLETED**
 - **Transform Components**: Position, Rotation, Scale, GridPosition with 2.5D coordinate utilities ✅ **COMPLETED**
-- **Test Coverage**: 120 passing tests with comprehensive coverage
+- **Rendering Components**: Sprite and Renderable POD components with ZII compliance ✅ **COMPLETED**
+- **Rendering System**: RenderSystem with dependency injection, MockRenderer, and comprehensive tests ✅ **COMPLETED**
+- **Test Coverage**: 167 passing tests with comprehensive coverage ✅ **CURRENT**
 
-### 🚧 In Progress
-- **Next Item**: Physics Components or Rendering Components (ready to choose direction)
+### 🚧 In Progress (Phase 1: Rendering Implementation)
+- **Current Status**: Ready to implement SFML window and actual rendering
+- **Next Priority**: SFMLRenderer implementing IRenderer interface
 
 ## 🚀 Development Phases
 
@@ -54,14 +57,20 @@ We're using a **two-track approach** that delivers value quickly while building 
   - `GridPosition { int x, y; }` for discrete tile-based logic
   - Coordinate conversion utilities (grid↔world↔isometric)
   - Distance calculations, interpolation, and angle utilities
+- [x] **Rendering Components** (`engine/ecs/components/`) ✅ **COMPLETED**
+  - `Sprite { int textureId; float width, height; }` for texture-based rendering
+  - `Renderable { float width, height, red, green, blue, alpha; }` for colored shapes
+  - ZII compliance with alpha=0.0f (transparent by default)
+  - Component registry integration and comprehensive test coverage
+- [x] **Rendering System** (`engine/rendering/`) ✅ **COMPLETED**
+  - `RenderSystem` with dependency injection and component filtering
+  - `MockRenderer` for comprehensive testing without graphics dependencies
+  - Frame lifecycle management (beginFrame → clear → endFrame)
+  - Entity filtering for Position + (Sprite OR Renderable) components
 - [ ] **Physics Components**
   - `Velocity { float dx, dy; }` for smooth movement
   - `Acceleration { float dx, dy; }` for physics-based motion
   - Grid-based movement components
-- [ ] **Rendering Components**
-  - `Sprite { TextureID texture; int width, height; }`
-  - `Color { uint8_t r, g, b, a; }`
-  - `Visible { bool enabled; }`
 
 **Success Criteria Phase 1:**
 - ✅ Window opens and displays content
@@ -201,7 +210,7 @@ LOG_ERROR("Renderer", "Failed to load texture: {}", filename);
 ## 📈 Metrics and Success Tracking
 
 ### **Technical Metrics**
-- Test coverage: Currently 120 passing tests (95 ECS + 15 Logging + 10 Systems)
+- Test coverage: Currently 167 passing tests (comprehensive ECS, logging, systems, and rendering coverage)
 - Build time: Target <10 seconds for incremental builds
 - Frame rate: Target 60 FPS for simple scenes
 
