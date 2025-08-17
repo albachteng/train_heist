@@ -1,44 +1,103 @@
-# Rendering & Input Design
+# Rendering Module Design
 
-## Goals (Why this exists)
+## Current Architecture (v1 - MVP Implementation)
 
-- Library-agnostic engine: no #include <SFML/...> (or SDL/GL) in core ECS/game logic.
-- Modularity: rendering and input are swappable “services.”
-- Predictable surfaces for agentic AI: narrow interfaces, clear contracts, black-box backends.
-- Testability: headless mocks for unit/integration tests.
-- Performance: batch-friendly draw API, no per-frame heap churn, minimize virtual calls in tight loops.
+### Goals
+- **Library-agnostic engine**: No SFML/OpenGL includes in core ECS/game logic
+- **Modularity**: Swappable rendering backends through interfaces
+- **Testability**: Mock implementations for unit/integration tests
+- **Composable design**: Clear separation between rendering, resource management, and ECS components
 
-## Boundaries & Ownership Layers
+### Current Module Organization
 
-- Core Engine/Game (ECS, systems, gameplay): depends only on interfaces.
-- Adapter(s): SFMLRenderer, SFMLInputHandler, GLRenderer, etc. Implement interfaces, own backend resources.
-- Third-party: SFML, OpenGL/GLAD, etc. Only visible inside adapters.
-- Dependencies (one-way only)
-- Core → Interfaces → Adapters → Third-party
-- No adapter → core coupling. No third-party includes outside adapters.
+**Interface Location:**
+- `engine/rendering/include/IRenderer.hpp` - Core rendering interface (TODO: move from engine/ecs/systems/include/)
+- `engine/ecs/components/` - Rendering components (Sprite, Position, etc.)
 
-## Modules & Interfaces
+**Current IRenderer Interface (MVP):**
+```cpp
+class IRenderer {
+    virtual void beginFrame() = 0;
+    virtual void endFrame() = 0;
+    virtual void clear() = 0;
+    virtual void renderSprite(float x, float y, float z, float width, float height, int textureId) = 0;
+    virtual void renderRect(float x, float y, float width, float height, float r, float g, float b, float a) = 0;
+    virtual void getScreenSize(int& width, int& height) const = 0;
+};
+```
 
-### Rendering
+### Component Architecture
+- **Rendering components** live in `engine/ecs/components/` (reusable across systems)
+- **Rendering systems** live in `engine/rendering/src/` (specific to rendering module)
+- **Resource management** will be separate ResourceManager (future implementation)
 
-Interface location
+### Dependencies & Boundaries
+```
+Core ECS ← Rendering Components
+    ↑
+Rendering Systems ← IRenderer Interface ← Concrete Renderers (SFML, OpenGL, Mock)
+    ↑
+ResourceManager Interface ← Concrete Resource Managers
+```
 
-engine/rendering/include/IWindow.hpp
-engine/rendering/include/IRenderer.hpp
-engine/rendering/include/IRenderBackend.hpp (optional lower-level split)
-engine/rendering/include/Types.hpp (opaque handles, POD structs)
+## Future Evolution (v2+ - Performance & Features)
 
-### Responsibilities
+### Planned Enhancements
+1. **Opaque Resource Handles**
+   ```cpp
+   using TextureHandle = uint32_t;
+   virtual TextureHandle loadTexture(const std::string& path) = 0;
+   virtual void renderSprite(..., TextureHandle texture) = 0;
+   ```
 
-- Window creation & lifecycle (delegated to an IWindow).
-- Frame orchestration: beginFrame(), endFrame(), vsync control.
-- Camera transforms (view/projection).
-- Drawing primitives: sprites, text, lines/quads, instanced sprites.
-- Resource handle management: textures, fonts, shader programs (opaque to callers).
+2. **Batch Submission API**
+   ```cpp
+   struct SpriteBatch {
+       TextureHandle texture;
+       std::vector<SpriteInstance> instances;
+   };
+   virtual void renderBatch(const SpriteBatch& batch) = 0;
+   ```
 
-### Key design choices
+3. **Camera/Transform Pipeline**
+   ```cpp
+   virtual void setViewMatrix(const Matrix4& view) = 0;
+   virtual void setProjectionMatrix(const Matrix4& projection) = 0;
+   ```
 
-- Opaque handles (e.g., TextureHandle, FontHandle, ShaderHandle) returned by the renderer. Callers never see sf::Texture (or GL ids).
-- POD draw descriptors (SoA-friendly): SpriteDraw{ TextureHandle, Vec2 pos, Vec2 scale, float rotation, Color, UVs, Layer, Z }.
-- Batch submission: systems collect draw calls into contiguous buffers; renderer consumes them in one go to reduce virtual overhead and maximize cache locality.
-- No per-frame allocations: use arenas/ring buffers provided by the caller or inside the backend; zero-init (ZII) defaults.
+4. **Resource Management Integration**
+   - Separate ResourceManager for textures, fonts, shaders
+   - IRenderer consumes resource handles, doesn't manage loading
+   - Clear separation of concerns
+
+### Migration Strategy
+- Current interface provides solid MVP foundation
+- Future enhancements will be additive (no breaking changes to existing methods)
+- Component design already supports future features (Position.z for depth, etc.)
+
+## Implementation Priorities
+
+### Phase 1 (Current): Basic Rendering
+- [x] IRenderer interface defined
+- [ ] MockRenderer for testing
+- [ ] Basic rendering components (Sprite, Renderable)
+- [ ] SFMLRenderer implementation
+- [ ] Simple RenderSystem using immediate API
+
+### Phase 2 (Future): Resource Management
+- [ ] ResourceManager interface
+- [ ] Texture loading and management
+- [ ] Resource handle integration with IRenderer
+
+### Phase 3 (Future): Performance
+- [ ] Batch rendering API
+- [ ] Camera/transform pipeline
+- [ ] Advanced rendering features (layers, effects)
+
+## Design Principles
+
+1. **Start simple, evolve thoughtfully** - Current immediate API → future batching
+2. **Modular composition** - Separate concerns (rendering, resources, components)
+3. **Interface stability** - Add features without breaking existing code
+4. **Component reusability** - ECS components usable beyond just rendering
+5. **Clear boundaries** - No third-party dependencies leak into core ECS
