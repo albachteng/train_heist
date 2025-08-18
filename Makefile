@@ -88,10 +88,6 @@ SYSTEMS_TEST_OBJ := $(patsubst $(ECS_DIR)/systems/%.cpp,$(BUILD_DIR)/ecs/systems
 
 # Targets
 EXEC := $(BUILD_DIR)/game
-SAFE_EXEC := $(BUILD_DIR)/game_safe
-HEADLESS_EXEC := $(BUILD_DIR)/game_headless
-MINIMAL_EXEC := $(BUILD_DIR)/minimal_sfml_test
-SIMPLE_EXEC := $(BUILD_DIR)/simple_engine_test
 TEST_EXEC := $(BUILD_DIR)/ecs_tests
 
 # Default target
@@ -101,40 +97,12 @@ all: $(EXEC)
 $(EXEC): $(OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(GLAD_OBJ)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(SFML_LIBS) $(OPENGL_LIB)
 
-# Safe game executable (better error handling)
-$(SAFE_EXEC): $(BUILD_DIR)/main_safe.o $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(GLAD_OBJ)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(SFML_LIBS) $(OPENGL_LIB)
-
-# Headless game executable (no SFML dependencies)
-$(HEADLESS_EXEC): $(BUILD_DIR)/main_headless.o $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(TEST_RENDER_OBJ) $(GLAD_OBJ)
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(OPENGL_LIB)
-
-# Minimal SFML test (just SFML + simple window)
-$(MINIMAL_EXEC): $(BUILD_DIR)/minimal_sfml_test.o
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(SFML_LIBS)
-
-# Simple engine test (SFML + entity-like rendering)
-$(SIMPLE_EXEC): $(BUILD_DIR)/simple_engine_test.o
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(SFML_LIBS)
-
 # ECS tests executable
 $(TEST_EXEC): $(ENGINE_TEST_OBJ) $(COMPONENTS_TEST_OBJ) $(SYSTEMS_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(TEST_RENDER_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
 	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(OPENGL_LIB)
 
 # Compile source files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/main_safe.o: $(SRC_DIR)/main_safe.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/main_headless.o: $(SRC_DIR)/main_headless.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/minimal_sfml_test.o: $(SRC_DIR)/minimal_sfml_test.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/simple_engine_test.o: $(SRC_DIR)/simple_engine_test.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/ecs/src/%.o: $(ECS_DIR)/src/%.cpp
@@ -177,22 +145,10 @@ $(GLAD_OBJ): $(GLAD_SRC)
 	$(CC) -I$(GLAD_DIR)/include -c $< -o $@
 
 # Phony targets
-.PHONY: clean run test safe headless minimal simple
+.PHONY: clean run test 
 
 run: $(EXEC)
 	./$(EXEC)
-
-safe: $(SAFE_EXEC)
-	./$(SAFE_EXEC)
-
-headless: $(HEADLESS_EXEC)
-	./$(HEADLESS_EXEC)
-
-minimal: $(MINIMAL_EXEC)
-	./$(MINIMAL_EXEC)
-
-simple: $(SIMPLE_EXEC)
-	./$(SIMPLE_EXEC)
 
 test: $(TEST_EXEC)
 	./$(TEST_EXEC)

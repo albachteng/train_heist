@@ -18,19 +18,11 @@ bool SFMLWindowManager::createWindow(int width, int height, const std::string& t
         window->close();
     }
     
-    // Create new SFML window (SFML 3.x API with WSLg compatibility)
+    // Create new SFML window (let system choose optimal OpenGL context)
     try {
-        sf::ContextSettings settings;
-        settings.majorVersion = 2;
-        settings.minorVersion = 1;
-        settings.attributeFlags = sf::ContextSettings::Core;
-        
         window = std::make_unique<sf::RenderWindow>(
             sf::VideoMode(sf::Vector2u(static_cast<unsigned int>(width), static_cast<unsigned int>(height))), 
-            title,
-            sf::Style::Default,
-            sf::State::Windowed,
-            settings
+            title
         );
         return window && window->isOpen();
     } catch (...) {
