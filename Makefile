@@ -1,7 +1,7 @@
 # Compiler
 CXX := g++
 CC := gcc
-CXXFLAGS := -std=c++17 -Wall -Wextra -Iengine/ecs/include -Iengine/rendering/include -Iengine/ecs/systems/include -Iengine/ecs/components/include
+CXXFLAGS := -std=c++17 -Wall -Wextra -Iengine/ecs/include -Iengine/rendering/include -Iengine/ecs/systems/include -Iengine/ecs/components/include -Iengine/logging/include
 LDFLAGS :=
 
 # Detect OS
