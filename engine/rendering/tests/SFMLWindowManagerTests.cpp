@@ -193,3 +193,219 @@ TEST_F(SFMLWindowManagerTests, DisplayFunctionality) {
         windowManager->display();
     }
 }
+
+/**
+ * Test SFML event conversion - Closed events
+ */
+TEST_F(SFMLWindowManagerTests, EventConversionClosed) {
+    sf::Event sfmlEvent = sf::Event::Closed{};
+    WindowEvent windowEvent;
+    
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::Closed);
+    
+    // Other fields should remain at defaults
+    EXPECT_EQ(windowEvent.keyCode, 0);
+    EXPECT_EQ(windowEvent.mouseButton, 0);
+    EXPECT_EQ(windowEvent.mouseX, 0);
+    EXPECT_EQ(windowEvent.mouseY, 0);
+    EXPECT_EQ(windowEvent.width, 0);
+    EXPECT_EQ(windowEvent.height, 0);
+}
+
+/**
+ * Test SFML event conversion - Resized events
+ */
+TEST_F(SFMLWindowManagerTests, EventConversionResized) {
+    sf::Event sfmlEvent = sf::Event::Resized{{800u, 600u}};
+    WindowEvent windowEvent;
+    
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::Resized);
+    EXPECT_EQ(windowEvent.width, 800);
+    EXPECT_EQ(windowEvent.height, 600);
+    
+    // Other fields should remain at defaults
+    EXPECT_EQ(windowEvent.keyCode, 0);
+    EXPECT_EQ(windowEvent.mouseButton, 0);
+    EXPECT_EQ(windowEvent.mouseX, 0);
+    EXPECT_EQ(windowEvent.mouseY, 0);
+}
+
+/**
+ * Test SFML event conversion - Key pressed events
+ */
+TEST_F(SFMLWindowManagerTests, EventConversionKeyPressed) {
+    sf::Event::KeyPressed keyPressedData;
+    keyPressedData.code = sf::Keyboard::Key::A;
+    keyPressedData.alt = false;
+    keyPressedData.control = false;
+    keyPressedData.shift = false;
+    keyPressedData.system = false;
+    
+    sf::Event sfmlEvent = keyPressedData;
+    WindowEvent windowEvent;
+    
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::KeyPressed);
+    EXPECT_EQ(windowEvent.keyCode, static_cast<int>(sf::Keyboard::Key::A));
+    
+    // Test different keys
+    keyPressedData.code = sf::Keyboard::Key::Space;
+    sfmlEvent = keyPressedData;
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::KeyPressed);
+    EXPECT_EQ(windowEvent.keyCode, static_cast<int>(sf::Keyboard::Key::Space));
+    
+    // Test arrow keys
+    keyPressedData.code = sf::Keyboard::Key::Up;
+    sfmlEvent = keyPressedData;
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::KeyPressed);
+    EXPECT_EQ(windowEvent.keyCode, static_cast<int>(sf::Keyboard::Key::Up));
+}
+
+/**
+ * Test SFML event conversion - Key released events
+ */
+TEST_F(SFMLWindowManagerTests, EventConversionKeyReleased) {
+    sf::Event::KeyReleased keyReleasedData;
+    keyReleasedData.code = sf::Keyboard::Key::Escape;
+    keyReleasedData.alt = false;
+    keyReleasedData.control = false;
+    keyReleasedData.shift = false;
+    keyReleasedData.system = false;
+    
+    sf::Event sfmlEvent = keyReleasedData;
+    WindowEvent windowEvent;
+    
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::KeyReleased);
+    EXPECT_EQ(windowEvent.keyCode, static_cast<int>(sf::Keyboard::Key::Escape));
+    
+    // Test modifier keys
+    keyReleasedData.code = sf::Keyboard::Key::LShift;
+    sfmlEvent = keyReleasedData;
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::KeyReleased);
+    EXPECT_EQ(windowEvent.keyCode, static_cast<int>(sf::Keyboard::Key::LShift));
+}
+
+/**
+ * Test SFML event conversion - Mouse button pressed events
+ */
+TEST_F(SFMLWindowManagerTests, EventConversionMousePressed) {
+    sf::Event::MouseButtonPressed mousePressedData;
+    mousePressedData.button = sf::Mouse::Button::Left;
+    mousePressedData.position = {100, 200};
+    
+    sf::Event sfmlEvent = mousePressedData;
+    WindowEvent windowEvent;
+    
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::MousePressed);
+    EXPECT_EQ(windowEvent.mouseButton, static_cast<int>(sf::Mouse::Button::Left));
+    EXPECT_EQ(windowEvent.mouseX, 100);
+    EXPECT_EQ(windowEvent.mouseY, 200);
+    
+    // Test right mouse button
+    mousePressedData.button = sf::Mouse::Button::Right;
+    mousePressedData.position = {50, 75};
+    sfmlEvent = mousePressedData;
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::MousePressed);
+    EXPECT_EQ(windowEvent.mouseButton, static_cast<int>(sf::Mouse::Button::Right));
+    EXPECT_EQ(windowEvent.mouseX, 50);
+    EXPECT_EQ(windowEvent.mouseY, 75);
+    
+    // Test middle mouse button
+    mousePressedData.button = sf::Mouse::Button::Middle;
+    mousePressedData.position = {0, 0};
+    sfmlEvent = mousePressedData;
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::MousePressed);
+    EXPECT_EQ(windowEvent.mouseButton, static_cast<int>(sf::Mouse::Button::Middle));
+    EXPECT_EQ(windowEvent.mouseX, 0);
+    EXPECT_EQ(windowEvent.mouseY, 0);
+}
+
+/**
+ * Test SFML event conversion - Mouse button released events
+ */
+TEST_F(SFMLWindowManagerTests, EventConversionMouseReleased) {
+    sf::Event::MouseButtonReleased mouseReleasedData;
+    mouseReleasedData.button = sf::Mouse::Button::Left;
+    mouseReleasedData.position = {300, 400};
+    
+    sf::Event sfmlEvent = mouseReleasedData;
+    WindowEvent windowEvent;
+    
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::MouseReleased);
+    EXPECT_EQ(windowEvent.mouseButton, static_cast<int>(sf::Mouse::Button::Left));
+    EXPECT_EQ(windowEvent.mouseX, 300);
+    EXPECT_EQ(windowEvent.mouseY, 400);
+    
+    // Test edge coordinates
+    mouseReleasedData.button = sf::Mouse::Button::Right;
+    mouseReleasedData.position = {-10, -5};
+    sfmlEvent = mouseReleasedData;
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::MouseReleased);
+    EXPECT_EQ(windowEvent.mouseButton, static_cast<int>(sf::Mouse::Button::Right));
+    EXPECT_EQ(windowEvent.mouseX, -10);
+    EXPECT_EQ(windowEvent.mouseY, -5);
+}
+
+/**
+ * Test SFML event conversion - Mouse moved events
+ */
+TEST_F(SFMLWindowManagerTests, EventConversionMouseMoved) {
+    sf::Event::MouseMoved mouseMovedData;
+    mouseMovedData.position = {150, 250};
+    
+    sf::Event sfmlEvent = mouseMovedData;
+    WindowEvent windowEvent;
+    
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::MouseMoved);
+    EXPECT_EQ(windowEvent.mouseX, 150);
+    EXPECT_EQ(windowEvent.mouseY, 250);
+    
+    // Other fields should remain at defaults for mouse moved events
+    EXPECT_EQ(windowEvent.keyCode, 0);
+    EXPECT_EQ(windowEvent.mouseButton, 0);
+    EXPECT_EQ(windowEvent.width, 0);
+    EXPECT_EQ(windowEvent.height, 0);
+    
+    // Test large coordinates
+    mouseMovedData.position = {1920, 1080};
+    sfmlEvent = mouseMovedData;
+    EXPECT_TRUE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::MouseMoved);
+    EXPECT_EQ(windowEvent.mouseX, 1920);
+    EXPECT_EQ(windowEvent.mouseY, 1080);
+}
+
+/**
+ * Test SFML event conversion - Unknown/unsupported events
+ */
+TEST_F(SFMLWindowManagerTests, EventConversionUnknownEvents) {
+    // Test with events that our converter doesn't handle
+    sf::Event::TextEntered textEnteredData;
+    textEnteredData.unicode = 65u; // Character 'A' - not supported
+    sf::Event sfmlEvent = textEnteredData;
+    WindowEvent windowEvent;
+    
+    EXPECT_FALSE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::None);
+    
+    // Test with mouse wheel events (not currently supported)
+    sf::Event::MouseWheelScrolled mouseWheelData;
+    mouseWheelData.wheel = sf::Mouse::Wheel::Vertical;
+    mouseWheelData.delta = 1.0f;
+    mouseWheelData.position = {100, 200};
+    sfmlEvent = mouseWheelData;
+    EXPECT_FALSE(windowManager->testConvertSFMLEvent(sfmlEvent, windowEvent));
+    EXPECT_EQ(windowEvent.type, WindowEventType::None);
+}

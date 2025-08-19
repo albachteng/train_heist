@@ -34,6 +34,16 @@ public:
     void* getNativeRenderTarget() override;
     size_t getEventCount() const override;
     void resetEventCount() override;
+    
+    /**
+     * Public accessor for testing convertSFMLEvent (testing only)
+     * @param sfmlEvent SFML event to convert
+     * @param windowEvent Output WindowEvent structure
+     * @return true if event was successfully converted
+     */
+    bool testConvertSFMLEvent(const sf::Event& sfmlEvent, WindowEvent& windowEvent) {
+        return convertSFMLEvent(sfmlEvent, windowEvent);
+    }
 
 private:
     std::unique_ptr<sf::RenderWindow> window;
