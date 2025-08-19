@@ -1,4 +1,5 @@
 #include "../include/SFMLRenderer.hpp"
+#include "../include/SFMLResourceManager.hpp"
 #include <SFML/Graphics.hpp>
 #include <algorithm>
 #include <cstdint>
@@ -7,7 +8,8 @@ namespace ECS {
 
 SFMLRenderer::SFMLRenderer(IResourceManager* resourceManager, IWindowManager* windowManager)
     : resourceManager(resourceManager), windowManager(windowManager), currentRenderTarget(nullptr),
-      frameActive(false), currentFrameSpriteCount(0), currentFrameRectCount(0) {
+      frameActive(false), currentFrameSpriteCount(0), currentFrameRectCount(0), 
+      lastRectangleColor(sf::Color::Transparent) {
     
     // Initialize SFML objects
     // Note: For testing purposes, we'll create minimal SFML objects
@@ -43,12 +45,23 @@ void SFMLRenderer::endFrame() {
 }
 
 void SFMLRenderer::clear() {
-    // Clear render target if available
-    // For testing purposes, we simulate the clear operation
-    // In a real implementation, this would call: currentRenderTarget->clear(sf::Color::Black);
-    if (currentRenderTarget) {
-        // Simulate clear operation - no actual SFML call needed for testing
+    // Get window directly (like working tests)
+    if (!windowManager) {
+        return;
     }
+    
+    void* nativeTarget = windowManager->getNativeRenderTarget();
+    if (!nativeTarget) {
+        return;
+    }
+    
+    sf::RenderWindow* window = static_cast<sf::RenderWindow*>(nativeTarget);
+    if (!window || !window->isOpen()) {
+        return;
+    }
+    
+    // Clear directly (like working tests)
+    window->clear(sf::Color::Black);
 }
 
 void SFMLRenderer::renderSprite(float x, float y, float z, float width, float height, int textureHandle) {
@@ -60,37 +73,65 @@ void SFMLRenderer::renderSprite(float x, float y, float z, float width, float he
         return;
     }
     
-    // Simulate sprite rendering for testing purposes
-    // In a real implementation, this would:
-    // 1. Get texture from resource manager: const sf::Texture* texture = getTexture(textureHandle);
-    // 2. Create and configure sf::Sprite with position, scale, texture
-    // 3. Call currentRenderTarget->draw(sprite)
+    // Get texture from resource manager
+    const sf::Texture* texture = getTexture(textureHandle);
+    if (!texture) {
+        return; // Still count render attempt but skip actual rendering
+    }
     
-    // For testing, we just track the parameters and simulate successful rendering
-    (void)x; (void)y; (void)z; (void)width; (void)height; (void)textureHandle;
+    // Create and configure sprite for real SFML rendering
+    sf::Sprite sprite(*texture);
+    sprite.setPosition(sf::Vector2f(x, y));
     
-    // The render count increment at the top provides the behavior our tests expect
+    // Set sprite scale to achieve desired width/height
+    sf::Vector2u textureSize = texture->getSize();
+    if (textureSize.x > 0 && textureSize.y > 0) {
+        sprite.setScale(sf::Vector2f(width / textureSize.x, height / textureSize.y));
+    }
+    
+    // Render sprite (z-coordinate ignored for now, could be used for depth sorting later)
+    (void)z;
+    currentRenderTarget->draw(sprite);
 }
 
 void SFMLRenderer::renderRect(float x, float y, float width, float height, float r, float g, float b, float a) {
     // Increment rectangle count
     currentFrameRectCount++;
     
-    // Skip rendering if no render target
-    if (!currentRenderTarget) {
+    // Always perform color conversion for testing purposes (even if we can't render)
+    std::uint8_t red = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, r * 255.0f)));
+    std::uint8_t green = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, g * 255.0f)));
+    std::uint8_t blue = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, b * 255.0f)));
+    std::uint8_t alpha = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, a * 255.0f)));
+    
+    sf::Color convertedColor(red, green, blue, alpha);
+    
+    // Store the converted color for testing purposes (always, even if render fails)
+    lastRectangleColor = convertedColor;
+    
+    // Get window directly from window manager for actual rendering
+    if (!windowManager) {
         return;
     }
     
-    // Simulate rectangle rendering for testing purposes
-    // In a real implementation, this would:
-    // 1. Create/configure sf::RectangleShape with position, size, color
-    // 2. Convert color values from 0.0-1.0 to 0-255 range for SFML
-    // 3. Call currentRenderTarget->draw(rectangle)
+    void* nativeTarget = windowManager->getNativeRenderTarget();
+    if (!nativeTarget) {
+        return;
+    }
     
-    // For testing, we just track the parameters and simulate successful rendering
-    (void)x; (void)y; (void)width; (void)height; (void)r; (void)g; (void)b; (void)a;
+    // Cast to RenderWindow directly (safer than RenderTarget)
+    sf::RenderWindow* window = static_cast<sf::RenderWindow*>(nativeTarget);
+    if (!window || !window->isOpen()) {
+        return;
+    }
     
-    // The render count increment at the top provides the behavior our tests expect
+    // Create and configure rectangle (exactly like working tests)
+    sf::RectangleShape rectangle(sf::Vector2f(width, height));
+    rectangle.setPosition(sf::Vector2f(x, y));
+    rectangle.setFillColor(convertedColor);
+    
+    // Draw directly to window (like working tests)
+    window->draw(rectangle);
 }
 
 void SFMLRenderer::getScreenSize(int& width, int& height) const {
@@ -127,6 +168,10 @@ bool SFMLRenderer::isInFrame() const {
     return frameActive;
 }
 
+sf::Color SFMLRenderer::getLastRectangleColor() const {
+    return lastRectangleColor;
+}
+
 void SFMLRenderer::updateRenderTarget() {
     // Get render target from window manager
     if (windowManager) {
@@ -138,15 +183,19 @@ void SFMLRenderer::updateRenderTarget() {
 }
 
 const sf::Texture* SFMLRenderer::getTexture(int textureHandle) const {
-    // For now, return nullptr since we don't have actual SFML texture integration
-    // In a real implementation, this would:
-    // 1. Check if textureHandle is valid with resourceManager->isTextureValid()
-    // 2. Get SFML texture from resource manager's internal storage
-    // 3. Return pointer to sf::Texture
+    if (!resourceManager || !resourceManager->isTextureValid(textureHandle)) {
+        return nullptr;
+    }
     
-    // Since MockResourceManager doesn't store actual sf::Texture objects,
-    // we'll return nullptr but still allow render counting for testing
-    (void)textureHandle;
+    // Try to cast to SFMLResourceManager for real texture access
+    // This allows both MockResourceManager (for testing) and SFMLResourceManager (for real rendering)
+    auto* sfmlResourceManager = dynamic_cast<const class SFMLResourceManager*>(resourceManager);
+    if (sfmlResourceManager) {
+        return sfmlResourceManager->getSFMLTexture(textureHandle);
+    }
+    
+    // For MockResourceManager or other implementations, return nullptr
+    // (render counting still works for testing)
     return nullptr;
 }
 
