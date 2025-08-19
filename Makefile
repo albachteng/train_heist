@@ -33,7 +33,7 @@ else
 endif
 
 # Add SFML & GLAD includes
-CXXFLAGS += $(SFML_INCLUDES) -I$(GLAD_DIR)/include
+CXXFLAGS += $(SFML_INCLUDES) -I$(GLAD_DIR)/include -I$(INPUT_DIR)/include
 # Add GoogleTest includes only for test builds
 TEST_CXXFLAGS := $(CXXFLAGS) $(GTEST_INCLUDES)
 
@@ -43,11 +43,12 @@ ECS_DIR := engine/ecs
 COMPONENTS_DIR := engine/ecs/components
 LOGGING_DIR := engine/logging
 RENDER_DIR := engine/rendering
+INPUT_DIR := engine/input
 GLAD_DIR := third_party/OpenGL
 TEST_DIR := tests
 
 # Create build directories
-$(shell mkdir -p $(BUILD_DIR)/ecs/src $(BUILD_DIR)/ecs/systems/src $(BUILD_DIR)/ecs/systems/tests $(BUILD_DIR)/ecs/components/src $(BUILD_DIR)/ecs/components/tests $(BUILD_DIR)/logging/src $(BUILD_DIR)/logging/tests $(BUILD_DIR)/rendering/src $(BUILD_DIR)/rendering/tests $(BUILD_DIR)/tests $(BUILD_DIR)/glad)
+$(shell mkdir -p $(BUILD_DIR)/ecs/src $(BUILD_DIR)/ecs/systems/src $(BUILD_DIR)/ecs/systems/tests $(BUILD_DIR)/ecs/components/src $(BUILD_DIR)/ecs/components/tests $(BUILD_DIR)/logging/src $(BUILD_DIR)/logging/tests $(BUILD_DIR)/rendering/src $(BUILD_DIR)/rendering/tests $(BUILD_DIR)/input/src $(BUILD_DIR)/input/tests $(BUILD_DIR)/tests $(BUILD_DIR)/glad)
 $(foreach module,$(TEST_MODULES),$(shell mkdir -p $(BUILD_DIR)/engine/$(module)/tests))
 
 # Source files - only include main.cpp for the main executable
@@ -57,6 +58,7 @@ SYSTEMS_SRC := $(wildcard $(ECS_DIR)/systems/src/*.cpp)
 COMPONENTS_SRC := $(wildcard $(COMPONENTS_DIR)/src/*.cpp)
 LOGGING_SRC := $(wildcard $(LOGGING_DIR)/src/*.cpp)
 RENDER_SRC := $(wildcard $(RENDER_DIR)/src/*.cpp)
+INPUT_SRC := $(wildcard $(INPUT_DIR)/src/*.cpp)
 GLAD_SRC := $(GLAD_DIR)/src/glad.c
 TEST_SRC := $(wildcard $(TEST_DIR)/*.cpp)
 
@@ -64,7 +66,7 @@ TEST_SRC := $(wildcard $(TEST_DIR)/*.cpp)
 TEST_MODULES := ecs logging rendering physics input resources
 ENGINE_TEST_SRC := $(foreach module,$(TEST_MODULES),$(wildcard engine/$(module)/tests/*.cpp))
 # Filter out SFML tests since we're not linking SFML libraries in tests
-ENGINE_TEST_SRC := $(filter-out engine/rendering/tests/SFML%.cpp, $(ENGINE_TEST_SRC))
+ENGINE_TEST_SRC := $(filter-out engine/rendering/tests/SFML%.cpp engine/input/tests/SFML%.cpp, $(ENGINE_TEST_SRC))
 # Special handling for components (nested under ecs)
 COMPONENTS_TEST_SRC := $(wildcard $(COMPONENTS_DIR)/tests/*.cpp)
 SYSTEMS_TEST_SRC := $(wildcard $(ECS_DIR)/systems/tests/*.cpp)
@@ -74,7 +76,7 @@ TEST_RENDER_SRC := $(filter-out $(RENDER_DIR)/src/SFML%.cpp, $(RENDER_SRC))
 TEST_RENDER_OBJ := $(patsubst $(RENDER_DIR)/%.cpp,$(BUILD_DIR)/rendering/%.o,$(TEST_RENDER_SRC))
 
 # Integration tests - SFML-specific tests that need SFML libraries
-INTEGRATION_TEST_SRC := $(wildcard engine/rendering/tests/SFML*.cpp)
+INTEGRATION_TEST_SRC := $(wildcard engine/rendering/tests/SFML*.cpp engine/input/tests/SFML*.cpp)
 INTEGRATION_TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(INTEGRATION_TEST_SRC))
 
 # Object files
@@ -84,6 +86,7 @@ SYSTEMS_OBJ := $(patsubst $(ECS_DIR)/systems/%.cpp,$(BUILD_DIR)/ecs/systems/%.o,
 COMPONENTS_OBJ := $(patsubst $(COMPONENTS_DIR)/%.cpp,$(BUILD_DIR)/ecs/components/%.o,$(COMPONENTS_SRC))
 LOGGING_OBJ := $(patsubst $(LOGGING_DIR)/%.cpp,$(BUILD_DIR)/logging/%.o,$(LOGGING_SRC))
 RENDER_OBJ := $(patsubst $(RENDER_DIR)/%.cpp,$(BUILD_DIR)/rendering/%.o,$(RENDER_SRC))
+INPUT_OBJ := $(patsubst $(INPUT_DIR)/%.cpp,$(BUILD_DIR)/input/%.o,$(INPUT_SRC))
 GLAD_OBJ := $(BUILD_DIR)/glad/glad.o
 TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRC))
 ENGINE_TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(ENGINE_TEST_SRC))
@@ -99,7 +102,7 @@ INTEGRATION_EXEC := $(BUILD_DIR)/integration_tests
 all: $(EXEC)
 
 # Game executable
-$(EXEC): $(OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(GLAD_OBJ)
+$(EXEC): $(OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(INPUT_OBJ) $(GLAD_OBJ)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(SFML_LIBS) $(OPENGL_LIB)
 
 # ECS tests executable
@@ -107,7 +110,7 @@ $(TEST_EXEC): $(ENGINE_TEST_OBJ) $(COMPONENTS_TEST_OBJ) $(SYSTEMS_TEST_OBJ) $(EC
 	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(OPENGL_LIB)
 
 # Integration tests executable (includes SFML tests and full rendering objects)
-$(INTEGRATION_EXEC): $(INTEGRATION_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(GLAD_OBJ)
+$(INTEGRATION_EXEC): $(INTEGRATION_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(INPUT_OBJ) $(GLAD_OBJ)
 	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(SFML_LIBS) $(OPENGL_LIB)
 
 # Compile source files
@@ -140,6 +143,12 @@ $(BUILD_DIR)/rendering/src/%.o: $(RENDER_DIR)/src/%.cpp
 
 $(BUILD_DIR)/rendering/tests/%.o: $(RENDER_DIR)/tests/%.cpp
 	$(CXX) $(TEST_CXXFLAGS) -I$(RENDER_DIR)/include -c $< -o $@
+
+$(BUILD_DIR)/input/src/%.o: $(INPUT_DIR)/src/%.cpp
+	$(CXX) $(CXXFLAGS) -I$(INPUT_DIR)/include -c $< -o $@
+
+$(BUILD_DIR)/input/tests/%.o: $(INPUT_DIR)/tests/%.cpp
+	$(CXX) $(TEST_CXXFLAGS) -I$(INPUT_DIR)/include -c $< -o $@
 
 $(BUILD_DIR)/tests/%.o: $(TEST_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
