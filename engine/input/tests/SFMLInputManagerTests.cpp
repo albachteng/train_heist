@@ -2,6 +2,7 @@
 #include "../include/SFMLInputManager.hpp"
 #include "../../rendering/include/MockWindowManager.hpp"
 #include "../../ecs/systems/include/IInputManager.hpp"
+#include <SFML/Window.hpp>
 
 using namespace ECS;
 
@@ -97,7 +98,7 @@ TEST_F(SFMLInputManagerTest, KeyPressEventProcessing) {
     // Simulate key press event from window manager
     WindowEvent keyPressEvent;
     keyPressEvent.type = WindowEventType::KeyPressed;
-    keyPressEvent.keyCode = 65; // SFML key code for 'A' (this will need proper mapping)
+    keyPressEvent.keyCode = static_cast<int>(sf::Keyboard::Key::A); // SFML key code for 'A'
     
     mockWindowManager->addEvent(keyPressEvent);
     
@@ -120,7 +121,7 @@ TEST_F(SFMLInputManagerTest, KeyReleaseEventProcessing) {
     // First simulate a press to have something to release
     WindowEvent keyPressEvent;
     keyPressEvent.type = WindowEventType::KeyPressed;
-    keyPressEvent.keyCode = 32; // SFML Space key
+    keyPressEvent.keyCode = static_cast<int>(sf::Keyboard::Key::Space); // SFML Space key
     mockWindowManager->addEvent(keyPressEvent);
     sfmlInputManager->update();
     
@@ -130,7 +131,7 @@ TEST_F(SFMLInputManagerTest, KeyReleaseEventProcessing) {
     // Now simulate release
     WindowEvent keyReleaseEvent;
     keyReleaseEvent.type = WindowEventType::KeyReleased;
-    keyReleaseEvent.keyCode = 32; // SFML Space key
+    keyReleaseEvent.keyCode = static_cast<int>(sf::Keyboard::Key::Space); // SFML Space key
     mockWindowManager->addEvent(keyReleaseEvent);
     
     sfmlInputManager->update();
@@ -199,7 +200,7 @@ TEST_F(SFMLInputManagerTest, FrameBasedStateManagement) {
     // Simulate key press
     WindowEvent keyEvent;
     keyEvent.type = WindowEventType::KeyPressed;
-    keyEvent.keyCode = 13; // SFML Enter key
+    keyEvent.keyCode = static_cast<int>(sf::Keyboard::Key::Enter); // SFML Enter key
     mockWindowManager->addEvent(keyEvent);
     
     sfmlInputManager->update();
@@ -223,9 +224,9 @@ TEST_F(SFMLInputManagerTest, FrameBasedStateManagement) {
 TEST_F(SFMLInputManagerTest, MultipleSimultaneousKeys) {
     // Simulate pressing multiple keys in same frame
     WindowEvent events[] = {
-        {WindowEventType::KeyPressed, 65, 0, 0, 0, 0, 0}, // A key
-        {WindowEventType::KeyPressed, 83, 0, 0, 0, 0, 0}, // S key  
-        {WindowEventType::KeyPressed, 68, 0, 0, 0, 0, 0}  // D key
+        {WindowEventType::KeyPressed, static_cast<int>(sf::Keyboard::Key::A), 0, 0, 0, 0, 0}, // A key
+        {WindowEventType::KeyPressed, static_cast<int>(sf::Keyboard::Key::S), 0, 0, 0, 0, 0}, // S key  
+        {WindowEventType::KeyPressed, static_cast<int>(sf::Keyboard::Key::D), 0, 0, 0, 0, 0}  // D key
     };
     
     for (const auto& event : events) {
@@ -252,10 +253,10 @@ TEST_F(SFMLInputManagerTest, MultipleSimultaneousKeys) {
 TEST_F(SFMLInputManagerTest, KeyMappingEdgeCases) {
     // Test arrow keys (common edge case)
     WindowEvent events[] = {
-        {WindowEventType::KeyPressed, 37, 0, 0, 0, 0, 0}, // Left
-        {WindowEventType::KeyPressed, 38, 0, 0, 0, 0, 0}, // Up
-        {WindowEventType::KeyPressed, 39, 0, 0, 0, 0, 0}, // Right
-        {WindowEventType::KeyPressed, 40, 0, 0, 0, 0, 0}  // Down
+        {WindowEventType::KeyPressed, static_cast<int>(sf::Keyboard::Key::Left), 0, 0, 0, 0, 0}, // Left
+        {WindowEventType::KeyPressed, static_cast<int>(sf::Keyboard::Key::Up), 0, 0, 0, 0, 0}, // Up
+        {WindowEventType::KeyPressed, static_cast<int>(sf::Keyboard::Key::Right), 0, 0, 0, 0, 0}, // Right
+        {WindowEventType::KeyPressed, static_cast<int>(sf::Keyboard::Key::Down), 0, 0, 0, 0, 0}  // Down
     };
     
     for (const auto& event : events) {

@@ -72,6 +72,24 @@ private:
      */
     int convertToSFMLMouseButton(int engineButton) const;
     
+    /**
+     * Convert SFML mouse button to engine mouse button
+     * @param sfmlButton SFML mouse button
+     * @return Engine mouse button, or -1 if invalid
+     */
+    int convertFromSFMLMouseButton(int sfmlButton) const;
+    
+    /**
+     * Process a single window event
+     * @param event Window event to process
+     */
+    void processEvent(const WindowEvent& event);
+    
+    /**
+     * Initialize key mapping tables
+     */
+    void initializeKeyMappings();
+    
     // Dependencies
     IWindowManager* windowManager;
     

@@ -75,6 +75,10 @@ SYSTEMS_TEST_SRC := $(wildcard $(ECS_DIR)/systems/tests/*.cpp)
 TEST_RENDER_SRC := $(filter-out $(RENDER_DIR)/src/SFML%.cpp, $(RENDER_SRC))
 TEST_RENDER_OBJ := $(patsubst $(RENDER_DIR)/%.cpp,$(BUILD_DIR)/rendering/%.o,$(TEST_RENDER_SRC))
 
+# Test-only input sources (exclude SFML implementations)
+TEST_INPUT_SRC := $(filter-out $(INPUT_DIR)/src/SFML%.cpp, $(INPUT_SRC))
+TEST_INPUT_OBJ := $(patsubst $(INPUT_DIR)/%.cpp,$(BUILD_DIR)/input/%.o,$(TEST_INPUT_SRC))
+
 # Integration tests - SFML-specific tests that need SFML libraries
 INTEGRATION_TEST_SRC := $(wildcard engine/rendering/tests/SFML*.cpp engine/input/tests/SFML*.cpp)
 INTEGRATION_TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(INTEGRATION_TEST_SRC))
@@ -106,7 +110,7 @@ $(EXEC): $(OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(REN
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(SFML_LIBS) $(OPENGL_LIB)
 
 # ECS tests executable
-$(TEST_EXEC): $(ENGINE_TEST_OBJ) $(COMPONENTS_TEST_OBJ) $(SYSTEMS_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(TEST_RENDER_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
+$(TEST_EXEC): $(ENGINE_TEST_OBJ) $(COMPONENTS_TEST_OBJ) $(SYSTEMS_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(TEST_RENDER_OBJ) $(TEST_INPUT_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
 	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(OPENGL_LIB)
 
 # Integration tests executable (includes SFML tests and full rendering objects)
