@@ -73,6 +73,10 @@ SYSTEMS_TEST_SRC := $(wildcard $(ECS_DIR)/systems/tests/*.cpp)
 TEST_RENDER_SRC := $(filter-out $(RENDER_DIR)/src/SFML%.cpp, $(RENDER_SRC))
 TEST_RENDER_OBJ := $(patsubst $(RENDER_DIR)/%.cpp,$(BUILD_DIR)/rendering/%.o,$(TEST_RENDER_SRC))
 
+# Integration tests - SFML-specific tests that need SFML libraries
+INTEGRATION_TEST_SRC := $(wildcard engine/rendering/tests/SFML*.cpp)
+INTEGRATION_TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(INTEGRATION_TEST_SRC))
+
 # Object files
 OBJ := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRC_FILES))
 ECS_OBJ := $(patsubst $(ECS_DIR)/%.cpp,$(BUILD_DIR)/ecs/%.o,$(ECS_SRC))
@@ -89,6 +93,7 @@ SYSTEMS_TEST_OBJ := $(patsubst $(ECS_DIR)/systems/%.cpp,$(BUILD_DIR)/ecs/systems
 # Targets
 EXEC := $(BUILD_DIR)/game
 TEST_EXEC := $(BUILD_DIR)/ecs_tests
+INTEGRATION_EXEC := $(BUILD_DIR)/integration_tests
 
 # Default target
 all: $(EXEC)
@@ -100,6 +105,10 @@ $(EXEC): $(OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(REN
 # ECS tests executable
 $(TEST_EXEC): $(ENGINE_TEST_OBJ) $(COMPONENTS_TEST_OBJ) $(SYSTEMS_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(TEST_RENDER_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
 	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(OPENGL_LIB)
+
+# Integration tests executable (includes SFML tests and full rendering objects)
+$(INTEGRATION_EXEC): $(INTEGRATION_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(GLAD_OBJ)
+	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(SFML_LIBS) $(OPENGL_LIB)
 
 # Compile source files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
@@ -140,18 +149,28 @@ $(ENGINE_TEST_OBJ): $(BUILD_DIR)/%.o : %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(TEST_CXXFLAGS) -c $< -o $@
 
+# Explicit rules for integration test objects (SFML tests)
+$(INTEGRATION_TEST_OBJ): $(BUILD_DIR)/%.o : %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(TEST_CXXFLAGS) -c $< -o $@
+
 # Compile GLAD
 $(GLAD_OBJ): $(GLAD_SRC)
 	$(CC) -I$(GLAD_DIR)/include -c $< -o $@
 
 # Phony targets
-.PHONY: clean run test 
+.PHONY: clean run test integration
 
 run: $(EXEC)
 	./$(EXEC)
 
+# Unit tests - Mock-based tests without third-party library dependencies
 test: $(TEST_EXEC)
 	./$(TEST_EXEC)
+
+# Integration tests - SFML-based tests that require SFML libraries to be linked
+integration: $(INTEGRATION_EXEC)
+	./$(INTEGRATION_EXEC)
 
 clean:
 	rm -rf $(BUILD_DIR)/*

@@ -4,6 +4,7 @@
 #include "IResourceManager.hpp"
 #include "IWindowManager.hpp"
 #include <memory>
+#include <SFML/Graphics/Color.hpp>
 
 // Forward declarations to avoid heavy SFML includes in header
 namespace sf {
@@ -98,6 +99,12 @@ public:
      * @return true if frame is active
      */
     bool isInFrame() const;
+    
+    /**
+     * Get the last rendered rectangle's color (for testing color conversion)
+     * @return SFML Color of the last rectangle rendered, or transparent black if none
+     */
+    sf::Color getLastRectangleColor() const;
 
 private:
     // Dependency injection
@@ -117,6 +124,9 @@ private:
     // Statistics for testing
     size_t currentFrameSpriteCount;
     size_t currentFrameRectCount;
+    
+    // Last rendered rectangle color for testing
+    mutable sf::Color lastRectangleColor;
     
     /**
      * Update render target from window manager

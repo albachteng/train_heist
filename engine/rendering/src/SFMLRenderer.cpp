@@ -8,7 +8,8 @@ namespace ECS {
 
 SFMLRenderer::SFMLRenderer(IResourceManager* resourceManager, IWindowManager* windowManager)
     : resourceManager(resourceManager), windowManager(windowManager), currentRenderTarget(nullptr),
-      frameActive(false), currentFrameSpriteCount(0), currentFrameRectCount(0) {
+      frameActive(false), currentFrameSpriteCount(0), currentFrameRectCount(0), 
+      lastRectangleColor(sf::Color::Transparent) {
     
     // Initialize SFML objects
     // Note: For testing purposes, we'll create minimal SFML objects
@@ -97,7 +98,18 @@ void SFMLRenderer::renderRect(float x, float y, float width, float height, float
     // Increment rectangle count
     currentFrameRectCount++;
     
-    // Get window directly from window manager (like working tests)
+    // Always perform color conversion for testing purposes (even if we can't render)
+    std::uint8_t red = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, r * 255.0f)));
+    std::uint8_t green = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, g * 255.0f)));
+    std::uint8_t blue = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, b * 255.0f)));
+    std::uint8_t alpha = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, a * 255.0f)));
+    
+    sf::Color convertedColor(red, green, blue, alpha);
+    
+    // Store the converted color for testing purposes (always, even if render fails)
+    lastRectangleColor = convertedColor;
+    
+    // Get window directly from window manager for actual rendering
     if (!windowManager) {
         return;
     }
@@ -116,14 +128,7 @@ void SFMLRenderer::renderRect(float x, float y, float width, float height, float
     // Create and configure rectangle (exactly like working tests)
     sf::RectangleShape rectangle(sf::Vector2f(width, height));
     rectangle.setPosition(sf::Vector2f(x, y));
-    
-    // Convert color from 0.0-1.0 to 0-255 range for SFML
-    std::uint8_t red = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, r * 255.0f)));
-    std::uint8_t green = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, g * 255.0f)));
-    std::uint8_t blue = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, b * 255.0f)));
-    std::uint8_t alpha = static_cast<std::uint8_t>(std::max(0.0f, std::min(255.0f, a * 255.0f)));
-    
-    rectangle.setFillColor(sf::Color(red, green, blue, alpha));
+    rectangle.setFillColor(convertedColor);
     
     // Draw directly to window (like working tests)
     window->draw(rectangle);
@@ -161,6 +166,10 @@ size_t SFMLRenderer::getRectRenderCount() const {
 
 bool SFMLRenderer::isInFrame() const {
     return frameActive;
+}
+
+sf::Color SFMLRenderer::getLastRectangleColor() const {
+    return lastRectangleColor;
 }
 
 void SFMLRenderer::updateRenderTarget() {
