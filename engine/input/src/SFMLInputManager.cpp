@@ -1,6 +1,7 @@
 #include "../include/SFMLInputManager.hpp"
 #include "../../ecs/systems/include/IInputManager.hpp"
 #include "../../rendering/include/IWindowManager.hpp"
+#include "../../logging/include/Logger.hpp"
 #include <SFML/Window.hpp>
 
 namespace ECS {
@@ -10,6 +11,7 @@ SFMLInputManager::SFMLInputManager(IWindowManager* windowManager)
     , mouseX(0)
     , mouseY(0)
     , eventCount(0)
+    , windowCloseRequested(false)
 {
     // Initialize key mapping tables
     initializeKeyMappings();
@@ -45,13 +47,23 @@ void SFMLInputManager::update() {
     justPressedKeys.clear();
     justReleasedKeys.clear();
     justPressedMouseButtons.clear();
+    windowCloseRequested = false;
     
     // Process events from window manager if available
     if (windowManager) {
         WindowEvent event;
+        int eventsProcessed = 0;
         while (windowManager->pollEvent(event)) {
             processEvent(event);
             eventCount++;
+            eventsProcessed++;
+        }
+        
+        // Debug logging every 1000 frames to see if we're polling
+        static int debugFrameCount = 0;
+        debugFrameCount++;
+        if (debugFrameCount % 1000 == 0) {
+            LOG_INFO("SFMLInputManager", "Frame " + std::to_string(debugFrameCount) + " - Events processed: " + std::to_string(eventsProcessed));
         }
     }
 }
@@ -68,10 +80,15 @@ IWindowManager* SFMLInputManager::getWindowManager() const {
     return windowManager;
 }
 
+bool SFMLInputManager::wasWindowCloseRequested() const {
+    return windowCloseRequested;
+}
+
 void SFMLInputManager::processEvent(const WindowEvent& event) {
     switch (event.type) {
         case WindowEventType::KeyPressed: {
             int engineKeyCode = convertFromSFMLKeyCode(event.keyCode);
+            LOG_INFO("SFMLInputManager", "KeyPressed: SFML=" + std::to_string(event.keyCode) + " Engine=" + std::to_string(engineKeyCode));
             if (engineKeyCode != -1) {
                 currentlyPressedKeys.insert(engineKeyCode);
                 justPressedKeys.insert(engineKeyCode);
@@ -90,6 +107,7 @@ void SFMLInputManager::processEvent(const WindowEvent& event) {
         
         case WindowEventType::MousePressed: {
             int engineButton = convertFromSFMLMouseButton(event.mouseButton);
+            LOG_INFO("SFMLInputManager", "MousePressed: SFML=" + std::to_string(event.mouseButton) + " Engine=" + std::to_string(engineButton) + " at (" + std::to_string(event.mouseX) + "," + std::to_string(event.mouseY) + ")");
             if (engineButton != -1) {
                 currentlyPressedMouseButtons.insert(engineButton);
                 justPressedMouseButtons.insert(engineButton);
@@ -114,6 +132,11 @@ void SFMLInputManager::processEvent(const WindowEvent& event) {
         case WindowEventType::MouseMoved: {
             mouseX = event.mouseX;
             mouseY = event.mouseY;
+            break;
+        }
+        
+        case WindowEventType::Closed: {
+            windowCloseRequested = true;
             break;
         }
         

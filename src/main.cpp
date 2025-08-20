@@ -1,5 +1,6 @@
 #include "ComponentArray.hpp"
 #include "ComponentRegistry.hpp"
+#include "Entity.h"
 #include "EntityManager.hpp"
 #include "Logger.hpp"
 #include "RenderSystem.hpp"
@@ -7,19 +8,22 @@
 #include "SFMLRenderer.hpp"
 #include "SFMLResourceManager.hpp"
 #include "SFMLWindowManager.hpp"
+#include "../engine/input/include/SFMLInputManager.hpp"
+#include "../engine/ecs/systems/include/InputSystem.hpp"
 #include "SystemManager.hpp"
 #include "Transform.hpp"
 #include <cmath>
 #include <memory>
 
 /**
- * Train Heist - Basic Integration Demo
+ * Train Heist - Interactive Input Demo
  *
- * Demonstrates the complete rendering pipeline:
+ * Demonstrates the complete engine pipeline:
  * 1. SFML window creation and management
  * 2. ECS entity creation with Position and Renderable components
- * 3. Manual rendering of entities (simplified for demo)
- * 4. Real SFML graphics output with colored rectangles
+ * 3. Input system integration with keyboard and mouse handling
+ * 4. Interactive entity control with arrow keys
+ * 5. Mouse click logging and real SFML graphics output
  */
 
 using namespace ECS;
@@ -31,8 +35,8 @@ int main() {
                                                  Engine::LogLevel::INFO);
   Engine::GlobalLogger::setLogger(std::move(logger));
 
-  LOG_INFO("Main", "Train Heist - Basic Rendering Demo");
-  LOG_INFO("Main", "===================================");
+  LOG_INFO("Main", "Train Heist - Interactive Input Demo");
+  LOG_INFO("Main", "====================================");
 
   try {
     // Create core managers
@@ -40,22 +44,24 @@ int main() {
     auto resourceManager = std::make_unique<SFMLResourceManager>();
     auto renderer = std::make_unique<SFMLRenderer>(resourceManager.get(),
                                                    windowManager.get());
+    auto inputManager = std::make_unique<SFMLInputManager>(windowManager.get());
 
     // Create window
     LOG_INFO("Main", "Creating window...");
-    if (!windowManager->createWindow(800, 600, "Train Heist - Basic Demo")) {
+    if (!windowManager->createWindow(800, 600, "Train Heist - Interactive Demo")) {
       LOG_ERROR("Main", "Failed to create window!");
       return -1;
     }
 
     // Create ECS systems
     EntityManager entityManager;
+    auto inputSystem = std::make_unique<InputSystem>(inputManager.get());
 
     // Create component arrays
     ComponentArray<Position> positionComponents;
     ComponentArray<Renderable> renderableComponents;
 
-    LOG_INFO("ECS", "Setting up demo scene...");
+    LOG_INFO("ECS", "Setting up interactive demo scene...");
 
     // Get component bits
     uint64_t positionBit = getComponentBit<Position>();
@@ -63,13 +69,17 @@ int main() {
 
     // Create some demo entities with rectangles (no texture files needed)
 
-    // Red rectangle in top-left
+    // Red rectangle in top-left - CONTROLLABLE with arrow keys
     Entity redRect = entityManager.createEntity();
     positionComponents.add(redRect.id, {50.0f, 50.0f, 0.0f}, positionBit,
                            redRect);
     renderableComponents.add(redRect.id,
                              {100.0f, 100.0f, 1.0f, 0.0f, 0.0f, 1.0f},
                              renderableBit, redRect);
+    
+    // Set red rectangle as the controllable entity
+    inputSystem->setControlledEntity(redRect.id);
+    inputSystem->setMovementSpeed(5.0f); // Moderate movement speed
 
     // Green rectangle in top-right
     Entity greenRect = entityManager.createEntity();
@@ -106,20 +116,55 @@ int main() {
     LOG_INFO("ECS", "Created " +
                         std::to_string(entityManager.getActiveEntityCount()) +
                         " demo entities");
-    LOG_INFO("Main", "Starting render loop...");
-    LOG_INFO("Main", "Close window to exit.");
+    LOG_INFO("Main", "=== INTERACTIVE DEMO CONTROLS ===");
+    LOG_INFO("Main", "- Use ARROW KEYS to move the red rectangle");
+    LOG_INFO("Main", "- Click LEFT/RIGHT mouse buttons to see click logging");
+    LOG_INFO("Main", "- Press ESCAPE or close window to exit");
+    LOG_INFO("Main", "Starting interactive demo...");
 
     // Main game loop
     int frameCount = 0;
     while (windowManager->isWindowOpen()) {
-      // Handle events
-      WindowEvent event;
-      while (windowManager->pollEvent(event)) {
-        if (event.type == WindowEventType::Closed) {
-          windowManager->closeWindow();
+      // Let the input system process ALL events
+      inputSystem->update(entityManager, 1.0f);
+      
+      // Check if window close was requested or ESC key was pressed
+      if (inputManager->wasWindowCloseRequested() || inputManager->wasKeyPressed(KeyCode::Escape)) {
+        if (inputManager->wasKeyPressed(KeyCode::Escape)) {
+          LOG_INFO("Main", "Escape key pressed - closing demo");
         }
-        if (event.type == WindowEventType::KeyPressed) {
-          LOG_DEBUG("Input", "Key pressed: " + std::to_string(event.keyCode));
+        if (inputManager->wasWindowCloseRequested()) {
+          LOG_INFO("Main", "Window close requested - closing demo");
+        }
+        windowManager->closeWindow();
+      }
+      
+      // Handle keyboard input for controlled entity manually 
+      // (since our InputSystem logs but doesn't move entities directly)
+      EntityID controlledId = inputSystem->getControlledEntity();
+      if (controlledId != INVALID_ENTITY) {
+        Position* controlledPos = positionComponents.get(controlledId);
+        if (controlledPos) {
+          float moveSpeed = inputSystem->getMovementSpeed();
+          
+          if (inputManager->isKeyPressed(KeyCode::Left)) {
+            controlledPos->x -= moveSpeed;
+          }
+          if (inputManager->isKeyPressed(KeyCode::Right)) {
+            controlledPos->x += moveSpeed;
+          }
+          if (inputManager->isKeyPressed(KeyCode::Up)) {
+            controlledPos->y -= moveSpeed;
+          }
+          if (inputManager->isKeyPressed(KeyCode::Down)) {
+            controlledPos->y += moveSpeed;
+          }
+          
+          // Keep entity within window bounds
+          if (controlledPos->x < 0) controlledPos->x = 0;
+          if (controlledPos->y < 0) controlledPos->y = 0;
+          if (controlledPos->x > 700) controlledPos->x = 700; // 800 - 100 (width)
+          if (controlledPos->y > 500) controlledPos->y = 500; // 600 - 100 (height)
         }
       }
 

@@ -49,6 +49,12 @@ public:
      * @return Pointer to window manager
      */
     IWindowManager* getWindowManager() const;
+    
+    /**
+     * Check if a window close event was received this frame
+     * @return true if window close was requested
+     */
+    bool wasWindowCloseRequested() const;
 
 private:
     /**
@@ -108,6 +114,9 @@ private:
     
     // Statistics
     size_t eventCount;
+    
+    // Window events
+    bool windowCloseRequested;
     
     // Key mapping tables (initialized in constructor)
     std::unordered_map<int, int> engineToSFMLKeyMap;

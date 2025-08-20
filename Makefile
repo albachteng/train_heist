@@ -33,7 +33,7 @@ else
 endif
 
 # Add SFML & GLAD includes
-CXXFLAGS += $(SFML_INCLUDES) -I$(GLAD_DIR)/include -I$(INPUT_DIR)/include
+CXXFLAGS += $(SFML_INCLUDES) -I$(GLAD_DIR)/include -I$(INPUT_DIR)/include -I$(ECS_DIR)/systems/include
 # Add GoogleTest includes only for test builds
 TEST_CXXFLAGS := $(CXXFLAGS) $(GTEST_INCLUDES)
 
