@@ -96,12 +96,12 @@ Use `Event<T>` with strongly typed payloads for system communication:
 
 The project uses a two-tier testing system:
 
-- **Unit Tests** (`make test`): 201 fast tests with no external dependencies
+- **Unit Tests** (`make test`): 295+ fast tests with no external dependencies
   - Mock implementations for testing without graphics/window systems
-  - ECS core, logging, components, and system logic testing
-- **Integration Tests** (`make integration`): 55 comprehensive SFML integration tests
+  - ECS core, logging, components, input system, and system logic testing
+- **Integration Tests** (`make integration`): Comprehensive SFML integration tests
   - Real SFML library integration validation
-  - Color conversion, event handling, and rendering pipeline testing
+  - Color conversion, event handling, input processing, and rendering pipeline testing
   - Requires SFML libraries to be linked
 
 ## Current Implementation Status
@@ -115,13 +115,42 @@ The project uses a two-tier testing system:
 - **Transform Components**: Position, Rotation, Scale, GridPosition with utilities
 - **Rendering Components**: Sprite and Renderable with ZII compliance
 - **RenderSystem**: Entity filtering and rendering orchestration
-- **Interface Abstractions**: IRenderer, IWindowManager, IResourceManager
-- **SFML Integration**: Complete SFMLRenderer, SFMLWindowManager, SFMLResourceManager
-- **Mock Infrastructure**: Full mock implementations for testing
+- **Interface Abstractions**: IRenderer, IWindowManager, IResourceManager, IInputManager
+- **SFML Integration**: Complete SFMLRenderer, SFMLWindowManager, SFMLResourceManager, SFMLInputManager
+- **Mock Infrastructure**: Full mock implementations for testing (MockRenderer, MockWindowManager, MockResourceManager, MockInputManager)
 - **Event Conversion**: SFML → Engine event abstraction layer
+- **Input System**: SFMLInputManager with keyboard/mouse processing, InputSystem with ECS integration
+- **Interactive Demo**: Working keyboard-controlled entity with complete input pipeline
 
-### 🚧 **Next Priority: Input System**
-- **IInputManager**: Interface already defined
-- **SFMLInputManager**: SFML input implementation needed
-- **MockInputManager**: Testing infrastructure needed
-- **Integration**: Connect to main game loop
+### 🚧 **Next Priority: Grid-Based Physics System**
+- **GridMovement Component**: Discrete grid movement with smooth visual transitions
+- **Movement System**: Grid validation, interpolation, and turn-based movement support
+- **Physics Components**: Velocity and acceleration for smooth animations between grid cells
+- **Integration**: Update demo to use grid-based movement instead of free-form positioning
+
+## Grid-Based Physics Design Approach
+
+The physics system will support **dual-layer movement** for turn-based tactical gameplay:
+
+### **Logical Layer** (Grid Authority)
+- **GridPosition { int x, y; }**: Authoritative game position for all logic
+- **GridMovement { int targetX, targetY; float progress; bool isMoving; }**: Movement state
+- All collision detection, game rules, and turn management operate on grid coordinates
+
+### **Visual Layer** (Smooth Animation)  
+- **Position { float x, y, z; }**: Visual rendering position (interpolated)
+- **Velocity { float dx, dy; }**: Movement speed for grid cell transitions
+- Smooth interpolation between grid cells while maintaining discrete game logic
+
+### **Movement Pipeline**
+1. **Input → Grid Command**: Arrow keys generate grid movement requests
+2. **Validation**: Check target cell validity (bounds, obstacles, game rules)
+3. **Animation Start**: Set GridMovement target and initialize visual interpolation
+4. **Frame Updates**: Update Position based on GridMovement progress
+5. **Completion**: Snap to exact grid coordinates when movement finishes
+
+This approach enables:
+- **Turn-based gameplay**: Movement commands can be queued/executed in turns
+- **Smooth visuals**: No jarring teleportation between cells
+- **Game rule integration**: Collision detection, movement points, obstacles
+- **Future scalability**: Multi-entity simultaneous movement, pathfinding

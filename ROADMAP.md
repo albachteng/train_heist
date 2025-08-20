@@ -11,7 +11,7 @@ We're using a **two-track approach** that delivers value quickly while building 
 
 ## 📊 Current Status
 
-### ✅ Completed (Phase 0: ECS Foundation + Rendering Implementation)
+### ✅ Completed (Phase 0: ECS Foundation + Rendering + Input Implementation)
 - **ECS Core**: Entity/component management with bitmask tracking ✅ **COMPLETED**
 - **Systems Layer**: Priority-based system execution with dependency injection ✅ **COMPLETED**
 - **Event System**: Typed event queues for decoupled communication ✅ **COMPLETED**
@@ -21,17 +21,19 @@ We're using a **two-track approach** that delivers value quickly while building 
 - **Transform Components**: Position, Rotation, Scale, GridPosition with 2.5D coordinate utilities ✅ **COMPLETED**
 - **Rendering Components**: Sprite and Renderable POD components with ZII compliance ✅ **COMPLETED**
 - **Rendering System**: RenderSystem with dependency injection and comprehensive tests ✅ **COMPLETED**
-- **Interface Abstractions**: IRenderer, IWindowManager, IResourceManager interfaces ✅ **COMPLETED**
-- **SFML Integration**: Complete SFMLRenderer, SFMLWindowManager, SFMLResourceManager implementations ✅ **COMPLETED**
-- **Mock Testing Infrastructure**: MockRenderer, MockWindowManager, MockResourceManager ✅ **COMPLETED**
+- **Interface Abstractions**: IRenderer, IWindowManager, IResourceManager, IInputManager interfaces ✅ **COMPLETED**
+- **SFML Integration**: Complete SFMLRenderer, SFMLWindowManager, SFMLResourceManager, SFMLInputManager implementations ✅ **COMPLETED**
+- **Mock Testing Infrastructure**: MockRenderer, MockWindowManager, MockResourceManager, MockInputManager ✅ **COMPLETED**
 - **Event Conversion Layer**: SFML → Engine event abstraction with comprehensive testing ✅ **COMPLETED**
-- **Two-Tier Testing**: Unit tests (201) + Integration tests (55) with separate build targets ✅ **COMPLETED**
-- **Test Coverage**: 256 comprehensive tests (201 unit + 55 integration) ✅ **CURRENT**
+- **Input System**: SFMLInputManager with keyboard/mouse processing, InputSystem with ECS integration ✅ **COMPLETED**
+- **Interactive Demo**: Working keyboard-controlled entity with mouse logging via complete input pipeline ✅ **COMPLETED**
+- **Two-Tier Testing**: Unit tests + Integration tests with separate build targets ✅ **COMPLETED**
+- **Test Coverage**: 295+ comprehensive tests (unit + integration + input system tests) ✅ **CURRENT**
 
-### 🚧 In Progress (Phase 1: Input System Implementation)
-- **Current Status**: SFML rendering layer complete, ready for input system
-- **Next Priority**: SFMLInputManager implementing IInputManager interface
-- **Input Interface**: IInputManager already defined and ready for implementation
+### 🚧 In Progress (Phase 1: Grid-Based Physics System Implementation)
+- **Current Status**: Input system complete with working interactive demo, ready for physics system
+- **Next Priority**: Grid-based physics components (Velocity, Acceleration, GridMovement) with smooth animation support
+- **Focus**: Design physics system to support discrete grid logic with smooth visual transitions
 
 ## 🚀 Development Phases
 
@@ -43,13 +45,13 @@ We're using a **two-track approach** that delivers value quickly while building 
   - Basic SFML window creation and main loop
   - Simple renderer that can draw colored rectangles  
   - Camera system for 2D positioning
-- [ ] **Input Integration** 
+- [x] **Input Integration** ✅ **COMPLETED**
   - SFML input manager implementing `IInputManager`
   - Basic keyboard/mouse input handling
   - Input system that generates events
-- [ ] **Minimal Game Loop**
+- [x] **Minimal Game Loop** ✅ **COMPLETED**
   - Integration point showing SystemManager + EntityManager + Renderer
-  - Simple demo: controllable colored square on screen
+  - Working interactive demo: keyboard-controlled colored square on screen
 
 #### Track 2: Core Components (Parallel)
 - [x] **Logging System** (`engine/logging/`) ✅ **COMPLETED**
@@ -76,15 +78,17 @@ We're using a **two-track approach** that delivers value quickly while building 
   - Entity filtering for Position + (Sprite OR Renderable) components
   - Complete SFML integration with event conversion layer
   - Two-tier testing system (unit + integration tests)
-- [ ] **Physics Components**
-  - `Velocity { float dx, dy; }` for smooth movement
-  - `Acceleration { float dx, dy; }` for physics-based motion
-  - Grid-based movement components
+- [ ] **Physics Components** *(in progress)*
+  - `GridMovement { int targetX, targetY; float progress; }` for discrete grid-based movement  
+  - `Velocity { float dx, dy; }` for smooth visual transitions between grid cells
+  - `Acceleration { float dx, dy; }` for physics-based motion effects
+  - Grid validation and collision detection components
 
 **Success Criteria Phase 1:**
 - ✅ Window opens and displays content ✅ **ACHIEVED**
-- [ ] Keyboard input moves a visual element  
-- [ ] SystemManager orchestrates updates properly
+- ✅ Keyboard input moves a visual element ✅ **ACHIEVED** 
+- ✅ SystemManager orchestrates updates properly ✅ **ACHIEVED**
+- [ ] Grid-based movement with smooth visual transitions *(next milestone)*
 
 ### **Phase 2: Game Foundations** (Target: Week 2)
 **Goal**: Grid-based movement with multiple entities
@@ -171,6 +175,38 @@ We're using a **two-track approach** that delivers value quickly while building 
 4. **Game-Driven Design**: Every component gets tested in actual gameplay usage
 5. **Visibility-First Debugging**: Comprehensive logging for understanding runtime behavior
 6. **2.5D-Ready Architecture**: Design coordinate systems and rendering from the start to accommodate isometric projection
+
+### **Grid-Based Physics Architecture**
+Key design principles for turn-based tactical movement:
+
+**Dual-Layer Movement System:**
+- **Logical Layer**: Discrete grid positions for game rules, turn management, collision detection
+- **Visual Layer**: Smooth interpolation between grid cells for polished animations
+- **Grid Authority**: All gameplay logic operates on grid coordinates, visuals follow
+
+**Core Components for Grid Movement:**
+```cpp
+struct GridPosition { int x, y; };              // Authoritative logical position
+struct GridMovement {                           // Movement state tracking
+    int targetX, targetY;                       // Destination grid cell
+    float progress;                             // Animation progress (0.0 → 1.0)
+    float speed;                                // Movement speed modifier
+    bool isMoving;                              // Currently in transition?
+};
+struct Position { float x, y, z; };            // Visual rendering position (interpolated)
+```
+
+**Movement Pipeline:**
+1. **Input Processing**: Arrow keys queue movement commands to adjacent grid cells
+2. **Grid Validation**: Check if target cell is valid (bounds, obstacles, game rules)
+3. **Movement Initiation**: Set GridMovement target and begin visual interpolation
+4. **Visual Interpolation**: Update Position component based on GridMovement progress
+5. **Movement Completion**: Snap to exact grid coordinates when progress reaches 1.0
+
+**Turn-Based Integration Ready:**
+- Movement commands can be queued and executed in discrete turns
+- Animation system allows for simultaneous multi-entity movement
+- Grid validation supports complex game rules (movement points, obstacles, etc.)
 
 ### **2.5D Isometric Architecture**
 Key design considerations built into the foundation:
