@@ -44,11 +44,12 @@ COMPONENTS_DIR := engine/ecs/components
 LOGGING_DIR := engine/logging
 RENDER_DIR := engine/rendering
 INPUT_DIR := engine/input
+PHYSICS_DIR := engine/physics
 GLAD_DIR := third_party/OpenGL
 TEST_DIR := tests
 
 # Create build directories
-$(shell mkdir -p $(BUILD_DIR)/ecs/src $(BUILD_DIR)/ecs/systems/src $(BUILD_DIR)/ecs/systems/tests $(BUILD_DIR)/ecs/components/src $(BUILD_DIR)/ecs/components/tests $(BUILD_DIR)/logging/src $(BUILD_DIR)/logging/tests $(BUILD_DIR)/rendering/src $(BUILD_DIR)/rendering/tests $(BUILD_DIR)/input/src $(BUILD_DIR)/input/tests $(BUILD_DIR)/tests $(BUILD_DIR)/glad)
+$(shell mkdir -p $(BUILD_DIR)/ecs/src $(BUILD_DIR)/ecs/systems/src $(BUILD_DIR)/ecs/systems/tests $(BUILD_DIR)/ecs/components/src $(BUILD_DIR)/ecs/components/tests $(BUILD_DIR)/logging/src $(BUILD_DIR)/logging/tests $(BUILD_DIR)/rendering/src $(BUILD_DIR)/rendering/tests $(BUILD_DIR)/input/src $(BUILD_DIR)/input/tests $(BUILD_DIR)/physics/src $(BUILD_DIR)/physics/tests $(BUILD_DIR)/tests $(BUILD_DIR)/glad)
 $(foreach module,$(TEST_MODULES),$(shell mkdir -p $(BUILD_DIR)/engine/$(module)/tests))
 
 # Source files - only include main.cpp for the main executable
@@ -59,6 +60,7 @@ COMPONENTS_SRC := $(wildcard $(COMPONENTS_DIR)/src/*.cpp)
 LOGGING_SRC := $(wildcard $(LOGGING_DIR)/src/*.cpp)
 RENDER_SRC := $(wildcard $(RENDER_DIR)/src/*.cpp)
 INPUT_SRC := $(wildcard $(INPUT_DIR)/src/*.cpp)
+PHYSICS_SRC := $(wildcard $(PHYSICS_DIR)/src/*.cpp)
 GLAD_SRC := $(GLAD_DIR)/src/glad.c
 TEST_SRC := $(wildcard $(TEST_DIR)/*.cpp)
 
@@ -79,6 +81,10 @@ TEST_RENDER_OBJ := $(patsubst $(RENDER_DIR)/%.cpp,$(BUILD_DIR)/rendering/%.o,$(T
 TEST_INPUT_SRC := $(filter-out $(INPUT_DIR)/src/SFML%.cpp, $(INPUT_SRC))
 TEST_INPUT_OBJ := $(patsubst $(INPUT_DIR)/%.cpp,$(BUILD_DIR)/input/%.o,$(TEST_INPUT_SRC))
 
+# Physics tests (no SFML exclusions needed for physics)
+TEST_PHYSICS_SRC := $(PHYSICS_SRC)
+TEST_PHYSICS_OBJ := $(patsubst $(PHYSICS_DIR)/%.cpp,$(BUILD_DIR)/physics/%.o,$(TEST_PHYSICS_SRC))
+
 # Integration tests - SFML-specific tests that need SFML libraries
 INTEGRATION_TEST_SRC := $(wildcard engine/rendering/tests/SFML*.cpp engine/input/tests/SFML*.cpp)
 INTEGRATION_TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(INTEGRATION_TEST_SRC))
@@ -91,6 +97,7 @@ COMPONENTS_OBJ := $(patsubst $(COMPONENTS_DIR)/%.cpp,$(BUILD_DIR)/ecs/components
 LOGGING_OBJ := $(patsubst $(LOGGING_DIR)/%.cpp,$(BUILD_DIR)/logging/%.o,$(LOGGING_SRC))
 RENDER_OBJ := $(patsubst $(RENDER_DIR)/%.cpp,$(BUILD_DIR)/rendering/%.o,$(RENDER_SRC))
 INPUT_OBJ := $(patsubst $(INPUT_DIR)/%.cpp,$(BUILD_DIR)/input/%.o,$(INPUT_SRC))
+PHYSICS_OBJ := $(patsubst $(PHYSICS_DIR)/%.cpp,$(BUILD_DIR)/physics/%.o,$(PHYSICS_SRC))
 GLAD_OBJ := $(BUILD_DIR)/glad/glad.o
 TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SRC))
 ENGINE_TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(ENGINE_TEST_SRC))
@@ -106,15 +113,15 @@ INTEGRATION_EXEC := $(BUILD_DIR)/integration_tests
 all: $(EXEC)
 
 # Game executable
-$(EXEC): $(OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(INPUT_OBJ) $(GLAD_OBJ)
+$(EXEC): $(OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(INPUT_OBJ) $(PHYSICS_OBJ) $(GLAD_OBJ)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(SFML_LIBS) $(OPENGL_LIB)
 
 # ECS tests executable
-$(TEST_EXEC): $(ENGINE_TEST_OBJ) $(COMPONENTS_TEST_OBJ) $(SYSTEMS_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(TEST_RENDER_OBJ) $(TEST_INPUT_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
+$(TEST_EXEC): $(ENGINE_TEST_OBJ) $(COMPONENTS_TEST_OBJ) $(SYSTEMS_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(TEST_RENDER_OBJ) $(TEST_INPUT_OBJ) $(TEST_PHYSICS_OBJ) $(TEST_OBJ) $(GLAD_OBJ)
 	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(OPENGL_LIB)
 
 # Integration tests executable (includes SFML tests and full rendering objects)
-$(INTEGRATION_EXEC): $(INTEGRATION_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(INPUT_OBJ) $(GLAD_OBJ)
+$(INTEGRATION_EXEC): $(INTEGRATION_TEST_OBJ) $(ECS_OBJ) $(SYSTEMS_OBJ) $(COMPONENTS_OBJ) $(LOGGING_OBJ) $(RENDER_OBJ) $(INPUT_OBJ) $(PHYSICS_OBJ) $(GLAD_OBJ)
 	$(CXX) $(TEST_CXXFLAGS) $^ -o $@ $(GTEST_LIBS) $(SFML_LIBS) $(OPENGL_LIB)
 
 # Compile source files
@@ -153,6 +160,12 @@ $(BUILD_DIR)/input/src/%.o: $(INPUT_DIR)/src/%.cpp
 
 $(BUILD_DIR)/input/tests/%.o: $(INPUT_DIR)/tests/%.cpp
 	$(CXX) $(TEST_CXXFLAGS) -I$(INPUT_DIR)/include -c $< -o $@
+
+$(BUILD_DIR)/physics/src/%.o: $(PHYSICS_DIR)/src/%.cpp
+	$(CXX) $(CXXFLAGS) -I$(PHYSICS_DIR)/include -c $< -o $@
+
+$(BUILD_DIR)/physics/tests/%.o: $(PHYSICS_DIR)/tests/%.cpp
+	$(CXX) $(TEST_CXXFLAGS) -I$(PHYSICS_DIR)/include -c $< -o $@
 
 $(BUILD_DIR)/tests/%.o: $(TEST_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
