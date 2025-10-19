@@ -11,7 +11,7 @@ cd train_heist
 
 # Build third-party dependencies (see Platform Setup below)
 # Then build and test
-make test         # Build and run unit tests (201 tests, fast)
+make test         # Build and run unit tests (221 tests, fast)
 make integration  # Build and run integration tests (55 SFML tests)
 make run          # Build and run the main game executable
 ```
@@ -109,7 +109,7 @@ The project uses a cross-platform Makefile that automatically detects your opera
 
 ```bash
 make              # Build the main game executable
-make test         # Build and run unit tests (201 tests, fast)
+make test         # Build and run unit tests (221 tests, fast)
 make integration  # Build and run integration tests (55 SFML tests)
 make run          # Build and run the main game executable
 make clean        # Clean all build artifacts
@@ -117,13 +117,13 @@ make clean        # Clean all build artifacts
 
 ### Testing Architecture
 
-The project uses a **two-tier testing system**:
+The project uses a **two-tier testing system** with 276 tests total:
 
-- **Unit Tests** (`make test`): 201 fast tests with no external dependencies
+- **Unit Tests** (`make test`): 221 fast tests with no external dependencies
   - Mock implementations for graphics/window systems
-  - ECS core, logging, components, and system logic
+  - ECS core, logging, transform components, physics components, systems layer
   - Runs in ~3ms, ideal for development iteration
-- **Integration Tests** (`make integration`): 55 SFML integration tests  
+- **Integration Tests** (`make integration`): 55 SFML integration tests
   - Real SFML library validation and integration testing
   - Color conversion, event handling, rendering pipeline
   - Requires SFML libraries, runs in ~300ms
@@ -144,8 +144,8 @@ The engine follows a strict modular ECS architecture:
 2. **Systems Layer** (`engine/ecs/systems/`): Priority-based system execution with dependency injection ✅ **IMPLEMENTED**
 3. **Logging System** (`engine/logging/`): Multi-level logging with console/file output ✅ **IMPLEMENTED**
 4. **Rendering** (`engine/rendering/`): Complete SFML integration with interface abstractions ✅ **IMPLEMENTED**
-5. **Physics** (`engine/physics/`): Movement, collisions, and grid alignment *(planned)*
-6. **Input** (`engine/input/`): User input mapping to game events *(next priority)*
+5. **Input** (`engine/input/`): User input mapping to game events with ECS integration ✅ **IMPLEMENTED**
+6. **Physics** (`engine/physics/`): Grid-based movement with queued actions and bounds validation ✅ **IMPLEMENTED**
 7. **Resources** (`engine/resources/`): Asset loading and management *(interface ready)*
 8. **Utils** (`engine/utils/`): Shared utilities and helper functions *(planned)*
 
@@ -170,7 +170,7 @@ The following libraries are included as git submodules and built from source:
   - Complete event conversion layer (SFML → Engine events)
   - Comprehensive integration testing with 55 test cases
 - **GoogleTest** (`third_party/googletest/`) - Unit testing framework
-  - **Actively used** - 256 comprehensive tests (201 unit + 55 integration)
+  - **Actively used** - 276 comprehensive tests covering all engine systems
 
 ### Embedded Libraries
 
@@ -182,14 +182,16 @@ The following libraries are included as git submodules and built from source:
 
 ### Current Implementation Status
 
-The ECS core, systems layer, logging system, and rendering system are **fully implemented** with comprehensive test coverage (256 tests: 201 unit + 55 integration). Key accomplishments:
+The ECS core, systems layer, logging system, rendering system, input system, and physics system are **fully implemented** with comprehensive test coverage (276 tests). Key accomplishments:
 
-- **Complete SFML Integration**: SFMLRenderer, SFMLWindowManager, SFMLResourceManager with interface abstractions
-- **Two-Tier Testing**: Fast unit tests + thorough integration tests
-- **Event Conversion Layer**: Complete SFML → Engine event abstraction
+- **Complete SFML Integration**: SFMLRenderer, SFMLWindowManager, SFMLResourceManager, SFMLInputManager with interface abstractions
+- **Input System**: Keyboard/mouse processing with ECS integration and complete input pipeline
+- **Grid-Based Physics**: MovementSystem with queued actions, bounds validation, smooth interpolation
+- **Turn-Based Support**: Manual movement execution for turn-based tactical gameplay
+- **Entity Iteration**: Pointer-based iteration for current componentMask access
 - **Mock Infrastructure**: Full mock implementations for testing without external dependencies
 
-**Next Priority**: Input System implementation (IInputManager interface already defined)
+**Next Priority**: Main.cpp integration to demonstrate grid-based movement in action
 
 **Development Progress**: See [ROADMAP.md](ROADMAP.md) for current development plan, progress tracking, and next milestones.
 
@@ -248,23 +250,30 @@ See `GAME_DESIGN.md` for detailed game mechanics and design decisions.
 
 ## Testing
 
-The project uses a comprehensive **two-tier test-driven development approach**:
+The project uses a comprehensive **two-tier test-driven development approach** with 276 tests total:
 
 ```bash
-make test         # Run unit tests (201 tests, ~3ms)
-make integration  # Run integration tests (55 tests, ~300ms)
+make test         # Run unit tests (221 tests, fast)
+make integration  # Run integration tests (55 SFML tests)
 ```
 
 ### Test Organization
 
-- **Unit Tests**: Each module has its own `tests/` directory
-  - **Mock implementations** for testing without external dependencies
-  - **Fast execution** ideal for development iteration
-  - **Comprehensive coverage** of ECS, logging, components, and system logic
-- **Integration Tests**: SFML-specific tests validating real library integration
-  - **SFMLRenderer testing** - Color conversion, rendering pipeline validation
-  - **SFMLWindowManager testing** - Window management and event conversion
-  - **Event handling verification** - SFML → Engine event abstraction layer
+- **Unit Tests** (`make test`): 221 fast tests with no external dependencies
+  - **Mock implementations** for testing without graphics/window systems
+  - **ECS core**: Entity management, component arrays, event queues, component registry
+  - **Systems layer**: SystemManager, priority-based execution, dependency injection, SystemUtils
+  - **Transform components**: Position, Rotation, Scale, GridPosition with 2.5D utilities
+  - **Physics components**: GridMovement, GridBounds, Velocity, Acceleration with ZII compliance
+  - **Movement system**: Grid-based movement, queued actions, bounds validation, interpolation
+  - **Input system**: Keyboard/mouse processing, ECS integration, input pipeline
+  - Runs in ~3ms, ideal for development iteration
+- **Integration Tests** (`make integration`): 55 SFML integration tests
+  - Real SFML library validation and integration testing
+  - **SFMLRenderer testing**: Color conversion, rendering pipeline validation
+  - **SFMLWindowManager testing**: Window management and event conversion
+  - **Event handling verification**: SFML → Engine event abstraction layer
+  - Requires SFML libraries, runs in ~300ms
 
 ## Documentation
 

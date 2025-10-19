@@ -18,45 +18,25 @@ namespace SystemUtils {
 
 /**
  * Execute a function for each entity that has the required components
+ *
+ * The processor receives a const Entity& (read-only). To modify component data,
+ * use ComponentArray methods. Entity metadata (componentMask) should not be
+ * modified directly - use ComponentArray::add/remove instead.
+ *
  * @param entityManager The entity manager to query
  * @param requiredComponents Bitmask of required components
- * @param processor Function to call for each matching entity
+ * @param processor Function to call for each matching entity (receives const Entity&)
  */
 template<typename Processor>
-void forEachEntity(EntityManager& entityManager, 
-                   uint64_t requiredComponents, 
+void forEachEntity(EntityManager& entityManager,
+                   uint64_t requiredComponents,
                    Processor&& processor) {
-    std::vector<Entity> entities = entityManager.getAllEntitiesForIteration();
-    
-    for (const Entity& entity : entities) {
-        if (entityManager.isValid(entity) && 
-            (entity.componentMask & requiredComponents) == requiredComponents) {
-            processor(entity);
-        }
-    }
-}
+    std::vector<const Entity*> entities = entityManager.getAllEntitiesForIteration();
 
-/**
- * Execute a function for each entity that has the required components (with entity reference)
- * Useful when the processor needs to modify the entity
- * @param entityManager The entity manager to query
- * @param requiredComponents Bitmask of required components
- * @param processor Function to call for each matching entity
- */
-template<typename Processor>
-void forEachEntityRef(EntityManager& entityManager, 
-                      uint64_t requiredComponents, 
-                      Processor&& processor) {
-    std::vector<Entity> entities = entityManager.getAllEntitiesForIteration();
-    
-    for (const Entity& entity : entities) {
-        if (entityManager.isValid(entity) && 
-            (entity.componentMask & requiredComponents) == requiredComponents) {
-            // Get a reference to the actual stored entity, not the copy
-            Entity* storedEntity = entityManager.getEntityByID(entity.id);
-            if (storedEntity) {
-                processor(*storedEntity);
-            }
+    for (const Entity* entity : entities) {
+        if (entityManager.isValid(*entity) &&
+            (entity->componentMask & requiredComponents) == requiredComponents) {
+            processor(*entity);
         }
     }
 }
@@ -82,13 +62,13 @@ inline size_t countEntitiesWithComponents(EntityManager& entityManager,
  * @param requiredComponents Bitmask of required components
  * @return true if at least one matching entity exists
  */
-inline bool hasEntitiesWithComponents(EntityManager& entityManager, 
+inline bool hasEntitiesWithComponents(EntityManager& entityManager,
                                       uint64_t requiredComponents) {
-    std::vector<Entity> entities = entityManager.getAllEntitiesForIteration();
-    
-    for (const Entity& entity : entities) {
-        if (entityManager.isValid(entity) && 
-            (entity.componentMask & requiredComponents) == requiredComponents) {
+    std::vector<const Entity*> entities = entityManager.getAllEntitiesForIteration();
+
+    for (const Entity* entity : entities) {
+        if (entityManager.isValid(*entity) &&
+            (entity->componentMask & requiredComponents) == requiredComponents) {
             return true;
         }
     }
@@ -101,14 +81,15 @@ inline bool hasEntitiesWithComponents(EntityManager& entityManager,
  * @param requiredComponents Bitmask of required components
  * @return Pointer to first matching entity, or nullptr if none found
  */
-inline Entity* findFirstEntityWithComponents(EntityManager& entityManager, 
+inline Entity* findFirstEntityWithComponents(EntityManager& entityManager,
                                              uint64_t requiredComponents) {
-    std::vector<Entity> entities = entityManager.getAllEntitiesForIteration();
-    
-    for (Entity& entity : entities) {
-        if (entityManager.isValid(entity) && 
-            (entity.componentMask & requiredComponents) == requiredComponents) {
-            return &entity;
+    std::vector<const Entity*> entities = entityManager.getAllEntitiesForIteration();
+
+    for (const Entity* entity : entities) {
+        if (entityManager.isValid(*entity) &&
+            (entity->componentMask & requiredComponents) == requiredComponents) {
+            // Return mutable pointer to stored entity
+            return entityManager.getEntityByID(entity->id);
         }
     }
     return nullptr;

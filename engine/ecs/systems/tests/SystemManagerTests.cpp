@@ -37,11 +37,11 @@ public:
         
         // Process entities with required components for filtering testing
         processedEntityIDs.clear();
-        std::vector<Entity> entities = entityManager.getAllEntitiesForIteration();
-        for (const Entity& entity : entities) {
-            if (entityManager.isValid(entity) && 
-                (entity.componentMask & requiredComponents) == requiredComponents) {
-                processedEntityIDs.push_back(entity.id);
+        std::vector<const Entity*> entities = entityManager.getAllEntitiesForIteration();
+        for (const Entity* entity : entities) {
+            if (entityManager.isValid(*entity) &&
+                (entity->componentMask & requiredComponents) == requiredComponents) {
+                processedEntityIDs.push_back(entity->id);
             }
         }
     }

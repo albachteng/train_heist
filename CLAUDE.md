@@ -101,7 +101,7 @@ The engine follows a strict modular ECS architecture with these systems:
    - Refer to DESIGN.md, which exist in multiple directories across the codebase
 
 ### Current Implementation Status
-The ECS core and systems layer are fully implemented with comprehensive test coverage (167 passing tests including rendering system).
+The ECS core and systems layer are fully implemented with comprehensive test coverage (276 passing tests including rendering and physics systems).
 
 **Major Components Completed:**
 - ✅ **ECS Core**: Entity/ComponentArray/Event systems with bitmask queries
@@ -111,6 +111,10 @@ The ECS core and systems layer are fully implemented with comprehensive test cov
 - ✅ **Rendering Components**: Sprite and Renderable POD components with ZII compliance
 - ✅ **Rendering System**: Complete RenderSystem with dependency injection and MockRenderer
 - ✅ **Component Registry**: Automatic bit assignment and type safety
+- ✅ **Physics Components**: GridMovement, GridBounds, Velocity, Acceleration with ZII compliance
+- ✅ **Movement System**: Grid-based movement with queued actions, bounds validation, smooth interpolation
+- ✅ **Turn-Based Support**: Manual movement execution, queued movement system for turn-based gameplay
+- ✅ **Entity Iteration**: Fixed getAllEntitiesForIteration() to return pointers for current componentMask access
 
 **Development Progress**: See [ROADMAP.md](ROADMAP.md) for current development plan, phase tracking, and next steps.
 
@@ -142,10 +146,27 @@ Example component pattern:
 ```cpp
 struct Position {
     float x = 0.0f;
-    float y = 0.0f; 
+    float y = 0.0f;
     float z = 0.0f;
 };
 ```
+
+**ComponentArray Usage Pattern:**
+When adding or removing components, ALWAYS pass EntityManager& (not Entity&):
+
+```cpp
+// ✅ CORRECT:
+EntityManager entityManager;
+Entity entity = entityManager.createEntity();
+ComponentArray<Position> positions;
+uint64_t posBit = getComponentBit<Position>();
+positions.add(entity.id, Position{1.0f, 2.0f, 3.0f}, posBit, entityManager);
+
+// ❌ INCORRECT (won't compile):
+positions.add(entity.id, pos, posBit, entity);  // Compiler error!
+```
+
+This ensures componentMasks are updated in EntityManager's stored entities, not just local copies.
 
 ### System Design Requirements  
 Systems should be:

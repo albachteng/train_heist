@@ -147,12 +147,19 @@ const Entity* EntityManager::getEntityByID(EntityID entityId) const {
     return &entities[entityId];
 }
 
-std::vector<Entity> EntityManager::getAllEntitiesForIteration() const {
-    // Return entities excluding index 0 (reserved for INVALID_ENTITY)
+std::vector<const Entity*> EntityManager::getAllEntitiesForIteration() const {
+    // Return pointers to entities excluding index 0 (reserved for INVALID_ENTITY)
+    std::vector<const Entity*> result;
     if (entities.size() <= 1) {
-        return {};
+        return result;
     }
-    return std::vector<Entity>(entities.begin() + 1, entities.end());
+
+    result.reserve(entities.size() - 1);
+    for (size_t i = 1; i < entities.size(); ++i) {
+        result.push_back(&entities[i]);
+    }
+
+    return result;
 }
 
 void EntityManager::clear() {

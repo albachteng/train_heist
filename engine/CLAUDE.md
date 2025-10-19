@@ -16,8 +16,8 @@ The engine follows a modular ECS (Entity-Component-System) architecture with the
 - **Systems Layer** (`ecs/systems/`): Priority-based system execution with dependency injection ✅ **IMPLEMENTED**
 - **Logging System** (`logging/`): Multi-level logging with console/file output and global macros ✅ **IMPLEMENTED**
 - **Rendering System** (`rendering/`): Complete SFML integration with interface abstractions ✅ **IMPLEMENTED**
-- **Input System** (`input/`): User input mapping to game events *(next priority - interface ready)*
-- **Physics System** (`physics/`): Movement, collisions, and grid alignment *(planned)*
+- **Input System** (`input/`): User input mapping to game events with ECS integration ✅ **IMPLEMENTED**
+- **Physics System** (`physics/`): Grid-based movement with queued actions and bounds validation ✅ **IMPLEMENTED**
 - **Resources System** (`resources/`): Asset loading and management *(interface implemented)*
 - **Utils** (`utils/`): Shared utilities and helper functions *(planned)*
 
@@ -34,7 +34,7 @@ The engine follows a modular ECS (Entity-Component-System) architecture with the
 
 ## Development Workflow
 
-The ECS core, systems layer, logging system, and rendering system are fully implemented with comprehensive test coverage (256 tests: 201 unit + 55 integration). For the input system and future engine systems:
+The ECS core, systems layer, logging system, rendering system, input system, and physics system are fully implemented with comprehensive test coverage (276 tests: 221 unit + 55 integration). For future engine systems:
 
 1. **Start with headers** - Define component structs and system interfaces in `include/` directories
 2. **Write tests first** - Create unit tests in `tests/` directories before implementation  
@@ -94,15 +94,17 @@ Use `Event<T>` with strongly typed payloads for system communication:
 
 ## Testing Architecture
 
-The project uses a two-tier testing system:
+The project uses a two-tier testing system with 276 tests total:
 
-- **Unit Tests** (`make test`): 295+ fast tests with no external dependencies
+- **Unit Tests** (`make test`): 221 fast tests with no external dependencies
   - Mock implementations for testing without graphics/window systems
-  - ECS core, logging, components, input system, and system logic testing
-- **Integration Tests** (`make integration`): Comprehensive SFML integration tests
+  - ECS core, logging, transform components, physics components, systems layer
+  - Input system, movement system, and rendering system logic testing
+  - Runs in ~3ms, ideal for development iteration
+- **Integration Tests** (`make integration`): 55 SFML integration tests
   - Real SFML library integration validation
   - Color conversion, event handling, input processing, and rendering pipeline testing
-  - Requires SFML libraries to be linked
+  - Requires SFML libraries to be linked, runs in ~300ms
 
 ## Current Implementation Status
 
@@ -120,37 +122,41 @@ The project uses a two-tier testing system:
 - **Mock Infrastructure**: Full mock implementations for testing (MockRenderer, MockWindowManager, MockResourceManager, MockInputManager)
 - **Event Conversion**: SFML → Engine event abstraction layer
 - **Input System**: SFMLInputManager with keyboard/mouse processing, InputSystem with ECS integration
-- **Interactive Demo**: Working keyboard-controlled entity with complete input pipeline
+- **Physics Components**: GridMovement, GridBounds, Velocity, Acceleration with ZII compliance
+- **Movement System**: Grid-based movement with queued actions, bounds validation, smooth interpolation
+- **Turn-Based Support**: Manual movement execution for turn-based tactical gameplay
+- **Entity Iteration**: Pointer-based iteration for current componentMask access
 
-### 🚧 **Next Priority: Grid-Based Physics System**
-- **GridMovement Component**: Discrete grid movement with smooth visual transitions
-- **Movement System**: Grid validation, interpolation, and turn-based movement support
-- **Physics Components**: Velocity and acceleration for smooth animations between grid cells
-- **Integration**: Update demo to use grid-based movement instead of free-form positioning
+### 🚧 **Next Priority: Main.cpp Integration**
+- Update main.cpp demo to use MovementSystem with grid-based movement
+- Demonstrate discrete grid movement with smooth visual interpolation
+- Show turn-based queued movement execution in action
 
-## Grid-Based Physics Design Approach
+## Grid-Based Physics Architecture (Implemented)
 
-The physics system will support **dual-layer movement** for turn-based tactical gameplay:
+The physics system implements **dual-layer movement** for turn-based tactical gameplay:
 
 ### **Logical Layer** (Grid Authority)
 - **GridPosition { int x, y; }**: Authoritative game position for all logic
-- **GridMovement { int targetX, targetY; float progress; bool isMoving; }**: Movement state
+- **GridMovement { int targetX, targetY; float progress; bool isMoving; }**: Movement state tracking
+- **GridBounds { int minX, minY, maxX, maxY; }**: Movement validation boundaries
 - All collision detection, game rules, and turn management operate on grid coordinates
 
-### **Visual Layer** (Smooth Animation)  
+### **Visual Layer** (Smooth Animation)
 - **Position { float x, y, z; }**: Visual rendering position (interpolated)
 - **Velocity { float dx, dy; }**: Movement speed for grid cell transitions
+- **Acceleration { float dx, dy; }**: Physics-based motion effects
 - Smooth interpolation between grid cells while maintaining discrete game logic
 
 ### **Movement Pipeline**
-1. **Input → Grid Command**: Arrow keys generate grid movement requests
-2. **Validation**: Check target cell validity (bounds, obstacles, game rules)
-3. **Animation Start**: Set GridMovement target and initialize visual interpolation
-4. **Frame Updates**: Update Position based on GridMovement progress
-5. **Completion**: Snap to exact grid coordinates when movement finishes
+1. **Input → Grid Command**: Movement requests queued via requestGridMovement()
+2. **Validation**: MovementSystem checks target cell validity (bounds, game rules)
+3. **Animation Start**: GridMovement target set, visual interpolation initialized
+4. **Frame Updates**: Position component updated based on GridMovement progress
+5. **Completion**: Snap to exact grid coordinates when progress reaches 1.0
 
-This approach enables:
-- **Turn-based gameplay**: Movement commands can be queued/executed in turns
+This implementation enables:
+- **Turn-based gameplay**: Movement commands queued and executed via executeQueuedMovements()
 - **Smooth visuals**: No jarring teleportation between cells
-- **Game rule integration**: Collision detection, movement points, obstacles
-- **Future scalability**: Multi-entity simultaneous movement, pathfinding
+- **Game rule integration**: Bounds validation, movement constraints ready for obstacles/collision
+- **Future scalability**: Multi-entity simultaneous movement, pathfinding support

@@ -47,7 +47,9 @@ struct Entity {
 struct EntityHandle {
     EntityID id;
     uint32_t generation;
-    // Opaque reference for external systems - prevents direct component mask access
+    // Safe ID snapshot for external references (not a pointer)
+    // IMPORTANT: Handles do NOT auto-update with component changes
+    // Must re-fetch via EntityManager::getEntity(handle) to see current state
     // Generational safety: detects stale references when entity IDs are reused
     // API encapsulation: forces validation through ECS manager entry points
 };
@@ -80,14 +82,16 @@ Entity* current = entityManager.getEntityByID(entityId);
 
 ### System Iteration Pattern
 ```cpp
-// Systems iterate over all entities (including dead ones)
-for (const Entity& entity : entityManager.getAllEntitiesForIteration()) {
-    if (!entityManager.isValid(entity)) {
+// Systems iterate over entity pointers to access current componentMask
+std::vector<const Entity*> entities = entityManager.getAllEntitiesForIteration();
+for (const Entity* entity : entities) {
+    if (!entityManager.isValid(*entity)) {
         continue; // Skip dead entities
     }
-    
+
     // Process only living entities with required components
-    if ((entity.componentMask & requiredMask) == requiredMask) {
+    // Pointer access ensures we see current componentMask after ComponentArray updates
+    if ((entity->componentMask & requiredMask) == requiredMask) {
         // Update entity...
     }
 }
@@ -106,6 +110,7 @@ for (const Entity& entity : entityManager.getAllEntitiesForIteration()) {
 - **FUTURE**: Stored in **memory arenas** for fast allocation and swap-remove.
 - Zero-initialized on creation (ZII).
 - **ZII Compliance Enforced**: ComponentArray uses static_assert to enforce component requirements.
+- **EntityManager Integration**: ComponentArray::add() and ::remove() update component masks directly in EntityManager's stored entities.
 
 **Current Implementation**: ComponentArray uses std::vector for storage to prioritize 
 correctness and debugging during initial development. This provides:
@@ -124,22 +129,28 @@ correctness and debugging during initial development. This provides:
 template <typename Component>
 class ComponentArray {
     // ZII (Zero-is-Initialization) Compliance Enforcement
-    static_assert(std::is_trivially_copyable_v<Component>, 
+    static_assert(std::is_trivially_copyable_v<Component>,
                   "Component types must be trivially copyable (POD structs only)");
-    static_assert(std::is_default_constructible_v<Component>, 
+    static_assert(std::is_default_constructible_v<Component>,
                   "Component types must be default constructible");
-    
+
 private:
     std::vector<Component> components;
     std::vector<EntityID> entityIDs;
     std::unordered_map<EntityID, size_t> entityIndex;
 
 public:
-    void add(EntityID e, const Component& c, uint64_t componentBit, Entity& entity) {
+    // Add component and update EntityManager's stored entity componentMask
+    void add(EntityID entityId, const Component& c, uint64_t componentBit, EntityManager& entityManager) {
         components.push_back(c);
-        entityIDs.push_back(e);
-        entityIndex[e] = components.size() - 1;
-        entity.componentMask |= componentBit; // update entity bitmask
+        entityIDs.push_back(entityId);
+        entityIndex[entityId] = components.size() - 1;
+
+        // CRITICAL: Update the entity stored in EntityManager, not a local copy
+        Entity* storedEntity = entityManager.getEntityByID(entityId);
+        if (storedEntity) {
+            storedEntity->componentMask |= componentBit;
+        }
     }
 
     bool has(EntityID e) const {
@@ -151,8 +162,9 @@ public:
         return it != entityIndex.end() ? &components[it->second] : nullptr;
     }
 
-    void remove(EntityID e, uint64_t componentBit, Entity& entity) {
-        auto it = entityIndex.find(e);
+    // Remove component and update EntityManager's stored entity componentMask
+    void remove(EntityID entityId, uint64_t componentBit, EntityManager& entityManager) {
+        auto it = entityIndex.find(entityId);
         if (it == entityIndex.end()) return;
 
         size_t idx = it->second;
@@ -166,10 +178,44 @@ public:
         entityIDs.pop_back();
         entityIndex.erase(it);
 
-        entity.componentMask &= ~componentBit; // clear bit in entity mask
+        // CRITICAL: Update the entity stored in EntityManager, not a local copy
+        Entity* storedEntity = entityManager.getEntityByID(entityId);
+        if (storedEntity) {
+            storedEntity->componentMask &= ~componentBit;
+        }
     }
 };
 ```
+
+### ComponentArray Usage Pattern
+
+**CRITICAL: Always pass EntityManager& to add() and remove()**
+
+The ComponentArray methods `add()` and `remove()` require EntityManager& to synchronize componentMasks:
+
+```cpp
+// ✅ CORRECT: Pass EntityManager reference
+EntityManager entityManager;
+Entity entity = entityManager.createEntity();
+ComponentArray<Position> positions;
+
+uint64_t posBit = getComponentBit<Position>();
+positions.add(entity.id, Position{1.0f, 2.0f, 3.0f}, posBit, entityManager);
+
+// The entity stored in EntityManager now has the correct componentMask
+Entity* storedEntity = entityManager.getEntityByID(entity.id);
+assert(storedEntity->hasComponent(posBit));  // ✅ Works correctly
+```
+
+**Common Pitfall - DO NOT pass Entity by value:**
+
+```cpp
+// ❌ INCORRECT: This won't compile anymore
+Entity entity = entityManager.createEntity();
+positions.add(entity.id, pos, posBit, entity);  // Compiler error!
+```
+
+The old API allowed passing Entity by value, which caused silent bugs because the local Entity copy's componentMask was updated but EntityManager's stored entity was not. The new API prevents this bug by requiring EntityManager& directly.
 
 ### ZII Compliance Requirements
 Components must follow Zero-is-Initialization principles:
@@ -332,14 +378,24 @@ systemManager.updateAll(deltaTime, entityManager);
 Helper functions for common ECS operations:
 
 ```cpp
-// Iterate entities with required components
-SystemUtils::forEachEntity(entityManager, positionMask | velocityMask, 
-    [](const Entity& entity) {
-        // Process entity
+// Iterate entities with required components (passes const Entity& to processor)
+SystemUtils::forEachEntity(entityManager, positionMask | velocityMask,
+    [&](const Entity& entity) {
+        // Process entity (read-only access)
+        // To modify components, use ComponentArray methods
+        Position* pos = positions.get(entity.id);
+        Velocity* vel = velocities.get(entity.id);
+        if (pos && vel) {
+            pos->x += vel->dx;
+            pos->y += vel->dy;
+        }
     });
 
 // Count matching entities
 size_t count = SystemUtils::countEntitiesWithComponents(entityManager, movableMask);
+
+// Find first matching entity
+Entity* entity = SystemUtils::findFirstEntityWithComponents(entityManager, playerMask);
 ```
 
 ## Iteration / Queries
