@@ -72,10 +72,10 @@ int main() {
     // Red rectangle in top-left - CONTROLLABLE with arrow keys
     Entity redRect = entityManager.createEntity();
     positionComponents.add(redRect.id, {50.0f, 50.0f, 0.0f}, positionBit,
-                           redRect);
+                           entityManager);
     renderableComponents.add(redRect.id,
                              {100.0f, 100.0f, 1.0f, 0.0f, 0.0f, 1.0f},
-                             renderableBit, redRect);
+                             renderableBit, entityManager);
     
     // Set red rectangle as the controllable entity
     inputSystem->setControlledEntity(redRect.id);
@@ -84,34 +84,34 @@ int main() {
     // Green rectangle in top-right
     Entity greenRect = entityManager.createEntity();
     positionComponents.add(greenRect.id, {650.0f, 50.0f, 0.0f}, positionBit,
-                           greenRect);
+                           entityManager);
     renderableComponents.add(greenRect.id,
                              {100.0f, 100.0f, 0.0f, 1.0f, 0.0f, 1.0f},
-                             renderableBit, greenRect);
+                             renderableBit, entityManager);
 
     // Blue rectangle in bottom-left
     Entity blueRect = entityManager.createEntity();
     positionComponents.add(blueRect.id, {50.0f, 450.0f, 0.0f}, positionBit,
-                           blueRect);
+                           entityManager);
     renderableComponents.add(blueRect.id,
                              {100.0f, 100.0f, 0.0f, 0.0f, 1.0f, 1.0f},
-                             renderableBit, blueRect);
+                             renderableBit, entityManager);
 
     // Yellow rectangle in center (for animation)
     Entity yellowRect = entityManager.createEntity();
     positionComponents.add(yellowRect.id, {350.0f, 250.0f, 0.0f}, positionBit,
-                           yellowRect);
+                           entityManager);
     renderableComponents.add(yellowRect.id,
                              {100.0f, 100.0f, 1.0f, 1.0f, 0.0f, 0.8f},
-                             renderableBit, yellowRect);
+                             renderableBit, entityManager);
 
     // Semi-transparent purple rectangle overlapping center
     Entity purpleRect = entityManager.createEntity();
     positionComponents.add(purpleRect.id, {300.0f, 200.0f, 0.0f}, positionBit,
-                           purpleRect);
+                           entityManager);
     renderableComponents.add(purpleRect.id,
                              {200.0f, 200.0f, 1.0f, 0.0f, 1.0f, 0.5f},
-                             renderableBit, purpleRect);
+                             renderableBit, entityManager);
 
     LOG_INFO("ECS", "Created " +
                         std::to_string(entityManager.getActiveEntityCount()) +
