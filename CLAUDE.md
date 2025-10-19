@@ -142,10 +142,27 @@ Example component pattern:
 ```cpp
 struct Position {
     float x = 0.0f;
-    float y = 0.0f; 
+    float y = 0.0f;
     float z = 0.0f;
 };
 ```
+
+**ComponentArray Usage Pattern:**
+When adding or removing components, ALWAYS pass EntityManager& (not Entity&):
+
+```cpp
+// ✅ CORRECT:
+EntityManager entityManager;
+Entity entity = entityManager.createEntity();
+ComponentArray<Position> positions;
+uint64_t posBit = getComponentBit<Position>();
+positions.add(entity.id, Position{1.0f, 2.0f, 3.0f}, posBit, entityManager);
+
+// ❌ INCORRECT (won't compile):
+positions.add(entity.id, pos, posBit, entity);  // Compiler error!
+```
+
+This ensures componentMasks are updated in EntityManager's stored entities, not just local copies.
 
 ### System Design Requirements  
 Systems should be:

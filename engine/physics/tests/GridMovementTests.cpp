@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "../include/GridMovement.hpp"
 #include "../../ecs/include/ComponentArray.hpp"
+#include "../../ecs/include/EntityManager.hpp"
 
 using namespace ECS;
 
@@ -83,15 +84,17 @@ TEST_F(GridMovementTest, MovementReset) {
     movement.pendingX = 20;
     movement.pendingY = 25;
     
-    // Reset should clear animation state but preserve target
+    // Reset should only stop movement, preserving target, progress, and queued moves
     movement.reset();
-    
+
     EXPECT_EQ(movement.targetX, 8);      // Target preserved
-    EXPECT_EQ(movement.targetY, 12);     // Target preserved  
+    EXPECT_EQ(movement.targetY, 12);     // Target preserved
     EXPECT_FLOAT_EQ(movement.speed, 3.0f);  // Speed preserved
-    EXPECT_FLOAT_EQ(movement.progress, 0.0f);  // Progress reset
+    EXPECT_FLOAT_EQ(movement.progress, 0.75f);  // Progress preserved (for completion verification)
     EXPECT_FALSE(movement.isMoving);     // Movement stopped
-    EXPECT_FALSE(movement.hasPendingMove);  // Pending cleared
+    EXPECT_TRUE(movement.hasPendingMove);   // Queued move preserved (for manual execution)
+    EXPECT_EQ(movement.pendingX, 20);    // Queued target preserved
+    EXPECT_EQ(movement.pendingY, 25);    // Queued target preserved
 }
 
 /**
@@ -152,25 +155,26 @@ TEST_F(GridMovementTest, NoQueuedMovement) {
  */
 TEST_F(GridMovementTest, ComponentArrayIntegration) {
     ComponentArray<GridMovement> movements;
-    Entity entity1{1, 0x1};
-    Entity entity2{2, 0x1};
-    
+    EntityManager entityManager;
+    Entity entity1 = entityManager.createEntity();
+    Entity entity2 = entityManager.createEntity();
+
     // Add components
     uint64_t gridMoveBit = 0x1;
-    movements.add(entity1.id, GridMovement(10, 20), gridMoveBit, entity1);
-    movements.add(entity2.id, GridMovement(30, 40, 2.0f), gridMoveBit, entity2);
-    
+    movements.add(entity1.id, GridMovement(10, 20), gridMoveBit, entityManager);
+    movements.add(entity2.id, GridMovement(30, 40, 2.0f), gridMoveBit, entityManager);
+
     // Verify storage
     const GridMovement* move1 = movements.get(entity1.id);
     const GridMovement* move2 = movements.get(entity2.id);
-    
+
     ASSERT_NE(move1, nullptr);
     ASSERT_NE(move2, nullptr);
-    
+
     EXPECT_EQ(move1->targetX, 10);
     EXPECT_EQ(move1->targetY, 20);
     EXPECT_FLOAT_EQ(move1->speed, 1.0f);
-    
+
     EXPECT_EQ(move2->targetX, 30);
     EXPECT_EQ(move2->targetY, 40);
     EXPECT_FLOAT_EQ(move2->speed, 2.0f);
@@ -269,20 +273,21 @@ TEST_F(GridBoundsTest, CoordinateClamping) {
  */
 TEST_F(GridBoundsTest, ComponentArrayIntegration) {
     ComponentArray<GridBounds> boundsArray;
-    Entity entity{1, 0x2};
+    EntityManager entityManager;
+    Entity entity = entityManager.createEntity();
     uint64_t boundsBit = 0x2;
-    
+
     GridBounds customBounds(-10, -10, 50, 50);
-    boundsArray.add(entity.id, customBounds, boundsBit, entity);
-    
+    boundsArray.add(entity.id, customBounds, boundsBit, entityManager);
+
     const GridBounds* stored = boundsArray.get(entity.id);
     ASSERT_NE(stored, nullptr);
-    
+
     EXPECT_EQ(stored->minX, -10);
     EXPECT_EQ(stored->minY, -10);
     EXPECT_EQ(stored->maxX, 50);
     EXPECT_EQ(stored->maxY, 50);
-    
+
     // Test bounds functionality on stored component
     EXPECT_TRUE(stored->isValid(0, 0));
     EXPECT_FALSE(stored->isValid(-15, 0));

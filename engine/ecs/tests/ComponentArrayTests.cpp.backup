@@ -63,12 +63,12 @@ TEST_F(ComponentArrayTest, AddComponent) {
     ComponentArray<Position> positions;
     Position pos{10.0f, 20.0f, 30.0f};
     
-    positions.add(entity1.id, pos, positionBit, *entityManager);
+    positions.add(entity1.id, pos, positionBit, entity1);
     
     EXPECT_FALSE(positions.empty());
     EXPECT_EQ(positions.size(), 1);
     EXPECT_TRUE(positions.has(entity1.id));
-    EXPECT_TRUE(entityManager->getEntityByID(entity1.id)->hasComponent(positionBit));
+    EXPECT_TRUE(entity1.hasComponent(positionBit));
     
     Position* retrieved = positions.get(entity1.id);
     ASSERT_NE(retrieved, nullptr);
@@ -82,9 +82,9 @@ TEST_F(ComponentArrayTest, AddMultipleComponents) {
     Position pos2{4.0f, 5.0f, 6.0f};
     Position pos3{7.0f, 8.0f, 9.0f};
     
-    positions.add(entity1.id, pos1, positionBit, *entityManager);
-    positions.add(entity2.id, pos2, positionBit, *entityManager);
-    positions.add(entity3.id, pos3, positionBit, *entityManager);
+    positions.add(entity1.id, pos1, positionBit, entity1);
+    positions.add(entity2.id, pos2, positionBit, entity2);
+    positions.add(entity3.id, pos3, positionBit, entity3);
     
     EXPECT_EQ(positions.size(), 3);
     EXPECT_TRUE(positions.has(entity1.id));
@@ -102,12 +102,12 @@ TEST_F(ComponentArrayTest, UpdateExistingComponent) {
     Position pos1{1.0f, 2.0f, 3.0f};
     Position pos2{10.0f, 20.0f, 30.0f};
     
-    positions.add(entity1.id, pos1, positionBit, *entityManager);
+    positions.add(entity1.id, pos1, positionBit, entity1);
     EXPECT_EQ(*positions.get(entity1.id), pos1);
     EXPECT_EQ(positions.size(), 1);
     
     // Adding again should update, not duplicate
-    positions.add(entity1.id, pos2, positionBit, *entityManager);
+    positions.add(entity1.id, pos2, positionBit, entity1);
     EXPECT_EQ(*positions.get(entity1.id), pos2);
     EXPECT_EQ(positions.size(), 1);
 }
@@ -117,7 +117,7 @@ TEST_F(ComponentArrayTest, ConstGet) {
     ComponentArray<Position> positions;
     Position pos{1.0f, 2.0f, 3.0f};
     
-    positions.add(entity1.id, pos, positionBit, *entityManager);
+    positions.add(entity1.id, pos, positionBit, entity1);
     
     const ComponentArray<Position>& constPositions = positions;
     const Position* retrieved = constPositions.get(entity1.id);
@@ -134,14 +134,14 @@ TEST_F(ComponentArrayTest, RemoveComponent) {
     ComponentArray<Position> positions;
     Position pos{1.0f, 2.0f, 3.0f};
     
-    positions.add(entity1.id, pos, positionBit, *entityManager);
+    positions.add(entity1.id, pos, positionBit, entity1);
     EXPECT_TRUE(positions.has(entity1.id));
-    EXPECT_TRUE(entityManager->getEntityByID(entity1.id)->hasComponent(positionBit));
+    EXPECT_TRUE(entity1.hasComponent(positionBit));
     
-    positions.remove(entity1.id, positionBit, *entityManager);
+    positions.remove(entity1.id, positionBit, entity1);
     
     EXPECT_FALSE(positions.has(entity1.id));
-    EXPECT_FALSE(entityManager->getEntityByID(entity1.id)->hasComponent(positionBit));
+    EXPECT_FALSE(entity1.hasComponent(positionBit));
     EXPECT_TRUE(positions.empty());
     EXPECT_EQ(positions.get(entity1.id), nullptr);
 }
@@ -153,12 +153,12 @@ TEST_F(ComponentArrayTest, SwapRemoveBehavior) {
     Position pos2{4.0f, 5.0f, 6.0f};
     Position pos3{7.0f, 8.0f, 9.0f};
     
-    positions.add(entity1.id, pos1, positionBit, *entityManager);
-    positions.add(entity2.id, pos2, positionBit, *entityManager);
-    positions.add(entity3.id, pos3, positionBit, *entityManager);
+    positions.add(entity1.id, pos1, positionBit, entity1);
+    positions.add(entity2.id, pos2, positionBit, entity2);
+    positions.add(entity3.id, pos3, positionBit, entity3);
     
     // Remove middle element (entity2)
-    positions.remove(entity2.id, positionBit, *entityManager);
+    positions.remove(entity2.id, positionBit, entity2);
     
     EXPECT_EQ(positions.size(), 2);
     EXPECT_TRUE(positions.has(entity1.id));
@@ -175,10 +175,10 @@ TEST_F(ComponentArrayTest, RemoveNonExistentComponent) {
     ComponentArray<Position> positions;
     
     // Should not crash or affect anything
-    positions.remove(entity1.id, positionBit, *entityManager);
+    positions.remove(entity1.id, positionBit, entity1);
     
     EXPECT_TRUE(positions.empty());
-    EXPECT_FALSE(entityManager->getEntityByID(entity1.id)->hasComponent(positionBit));
+    EXPECT_FALSE(entity1.hasComponent(positionBit));
 }
 
 // Test clear functionality
@@ -187,8 +187,8 @@ TEST_F(ComponentArrayTest, ClearArray) {
     Position pos1{1.0f, 2.0f, 3.0f};
     Position pos2{4.0f, 5.0f, 6.0f};
     
-    positions.add(entity1.id, pos1, positionBit, *entityManager);
-    positions.add(entity2.id, pos2, positionBit, *entityManager);
+    positions.add(entity1.id, pos1, positionBit, entity1);
+    positions.add(entity2.id, pos2, positionBit, entity2);
     
     EXPECT_EQ(positions.size(), 2);
     
@@ -211,7 +211,7 @@ TEST_F(ComponentArrayTest, ReserveCapacity) {
     
     // Adding components after reserve should work normally
     Position pos{1.0f, 2.0f, 3.0f};
-    positions.add(entity1.id, pos, positionBit, *entityManager);
+    positions.add(entity1.id, pos, positionBit, entity1);
     EXPECT_EQ(positions.size(), 1);
     EXPECT_EQ(*positions.get(entity1.id), pos);
 }
@@ -222,8 +222,8 @@ TEST_F(ComponentArrayTest, IndexBasedAccess) {
     Position pos1{1.0f, 2.0f, 3.0f};
     Position pos2{4.0f, 5.0f, 6.0f};
     
-    positions.add(entity1.id, pos1, positionBit, *entityManager);
-    positions.add(entity2.id, pos2, positionBit, *entityManager);
+    positions.add(entity1.id, pos1, positionBit, entity1);
+    positions.add(entity2.id, pos2, positionBit, entity2);
     
     EXPECT_EQ(positions.getByIndex(0), pos1);
     EXPECT_EQ(positions.getByIndex(1), pos2);
@@ -242,8 +242,8 @@ TEST_F(ComponentArrayTest, IterationSupport) {
     Position pos1{1.0f, 2.0f, 3.0f};
     Position pos2{4.0f, 5.0f, 6.0f};
     
-    positions.add(entity1.id, pos1, positionBit, *entityManager);
-    positions.add(entity2.id, pos2, positionBit, *entityManager);
+    positions.add(entity1.id, pos1, positionBit, entity1);
+    positions.add(entity2.id, pos2, positionBit, entity2);
     
     const auto& components = positions.getComponents();
     const auto& entityIDs = positions.getEntityIDs();
@@ -264,10 +264,10 @@ TEST_F(ComponentArrayTest, DifferentComponentType) {
     ComponentArray<Velocity> velocities;
     Velocity vel{5.0f, -3.0f};
     
-    velocities.add(entity1.id, vel, velocityBit, *entityManager);
+    velocities.add(entity1.id, vel, velocityBit, entity1);
     
     EXPECT_TRUE(velocities.has(entity1.id));
-    EXPECT_TRUE(entityManager->getEntityByID(entity1.id)->hasComponent(velocityBit));
+    EXPECT_TRUE(entity1.hasComponent(velocityBit));
     EXPECT_EQ(*velocities.get(entity1.id), vel);
 }
 
@@ -279,12 +279,12 @@ TEST_F(ComponentArrayTest, MultipleComponentTypes) {
     Position pos{1.0f, 2.0f, 3.0f};
     Velocity vel{5.0f, -3.0f};
     
-    positions.add(entity1.id, pos, positionBit, *entityManager);
-    velocities.add(entity1.id, vel, velocityBit, *entityManager);
+    positions.add(entity1.id, pos, positionBit, entity1);
+    velocities.add(entity1.id, vel, velocityBit, entity1);
     
-    EXPECT_TRUE(entityManager->getEntityByID(entity1.id)->hasComponent(positionBit));
-    EXPECT_TRUE(entityManager->getEntityByID(entity1.id)->hasComponent(velocityBit));
-    EXPECT_TRUE(entityManager->getEntityByID(entity1.id)->hasComponents(positionBit | velocityBit));
+    EXPECT_TRUE(entity1.hasComponent(positionBit));
+    EXPECT_TRUE(entity1.hasComponent(velocityBit));
+    EXPECT_TRUE(entity1.hasComponents(positionBit | velocityBit));
     
     EXPECT_EQ(*positions.get(entity1.id), pos);
     EXPECT_EQ(*velocities.get(entity1.id), vel);
@@ -308,7 +308,7 @@ TEST_F(ComponentArrayTest, ZIICompliantComponentAccepted) {
     Position comp; // Should be zero-initialized: x=0, y=0, z=0
     
     // This should work without issues
-    EXPECT_NO_THROW(components.add(entity1.id, comp, positionBit, *entityManager));
+    EXPECT_NO_THROW(components.add(entity1.id, comp, positionBit, entity1));
     EXPECT_TRUE(components.has(entity1.id));
     
     // Verify zero-initialization worked
@@ -404,12 +404,12 @@ TEST_F(ComponentArrayEntityManagerIntegrationTest, ComponentMaskSynchronizationB
     // Verify entity starts with no components
     EXPECT_EQ(entity.componentMask, 0);
 
-    // Add component using ComponentArray::add() - this now updates EntityManager's stored entity
+    // Add component using ComponentArray::add() - this updates the LOCAL COPY
     Position pos{10.0f, 20.0f, 30.0f};
-    positions->add(entityId, pos, positionBit, *entityManager);
+    positions->add(entityId, pos, positionBit, entity);
 
-    // The local copy won't be updated, but the stored entity will be
-    // (This is intentional - we only update the entity stored in EntityManager)
+    // The local copy now has the component bit set
+    EXPECT_TRUE(entity.hasComponent(positionBit));
 
     // BUG DEMONSTRATION: The entity stored in EntityManager was NOT updated
     // When we retrieve the entity from EntityManager, it should have the component bit set
@@ -422,12 +422,12 @@ TEST_F(ComponentArrayEntityManagerIntegrationTest, ComponentMaskSynchronizationB
         << "ComponentMask should be updated in EntityManager's stored entity, not just the local copy";
 
     // This also affects system iteration - entities returned from getAllEntitiesForIteration()
-    // should have correct componentMasks now
+    // won't have correct componentMasks
     auto entities = entityManager->getAllEntitiesForIteration();
     bool foundEntityWithCorrectMask = false;
-    for (const Entity* e : entities) {
-        if (e->id == entityId && entityManager->isValid(*e)) {
-            foundEntityWithCorrectMask = e->hasComponent(positionBit);
+    for (const auto& e : entities) {
+        if (e.id == entityId && entityManager->isValid(e)) {
+            foundEntityWithCorrectMask = e.hasComponent(positionBit);
             break;
         }
     }
@@ -448,8 +448,11 @@ TEST_F(ComponentArrayEntityManagerIntegrationTest, MultiComponentMaskSynchroniza
     Position pos{1.0f, 2.0f, 3.0f};
     Velocity vel{5.0f, -3.0f};
 
-    positions->add(entityId, pos, positionBit, *entityManager);
-    velocities->add(entityId, vel, velocityBit, *entityManager);
+    positions->add(entityId, pos, positionBit, entity);
+    velocities->add(entityId, vel, velocityBit, entity);
+
+    // Local copy has both components
+    EXPECT_TRUE(entity.hasComponents(positionBit | velocityBit));
 
     // BUG: EntityManager's stored entity doesn't have updated mask
     Entity* storedEntity = entityManager->getEntityByID(entityId);
@@ -472,7 +475,7 @@ TEST_F(ComponentArrayEntityManagerIntegrationTest, ComponentRemovalMaskSynchroni
     EntityID entityId = entity.id;
 
     Position pos{1.0f, 2.0f, 3.0f};
-    positions->add(entityId, pos, positionBit, *entityManager);
+    positions->add(entityId, pos, positionBit, entity);
 
     // After fix, this should work
     Entity* storedEntity = entityManager->getEntityByID(entityId);
@@ -480,7 +483,10 @@ TEST_F(ComponentArrayEntityManagerIntegrationTest, ComponentRemovalMaskSynchroni
     EXPECT_TRUE(storedEntity->hasComponent(positionBit));
 
     // Remove component - this should also update EntityManager's stored entity
-    positions->remove(entityId, positionBit, *entityManager);
+    positions->remove(entityId, positionBit, entity);
+
+    // Local copy no longer has component
+    EXPECT_FALSE(entity.hasComponent(positionBit));
 
     // Stored entity should also not have component
     storedEntity = entityManager->getEntityByID(entityId);

@@ -47,11 +47,12 @@ struct GridMovement {
     
     /**
      * Reset movement state (called when movement completes)
+     * Note: progress and hasPendingMove are intentionally NOT reset
+     * - progress: preserved so completion can be verified
+     * - hasPendingMove: preserved so queued movements can be executed manually
      */
     void reset() {
-        progress = 0.0f;
         isMoving = false;
-        hasPendingMove = false;
     }
     
     /**

@@ -13,7 +13,6 @@ class MovementSystemTest : public ::testing::Test {
 protected:
     void SetUp() override {
         mockInput = std::make_unique<MockInputManager>();
-        movementSystem = std::make_unique<MovementSystem>(mockInput.get());
         entityManager = std::make_unique<EntityManager>();
         
         // Set up component arrays
@@ -22,6 +21,18 @@ protected:
         gridMovements = std::make_unique<ComponentArray<GridMovement>>();
         velocities = std::make_unique<ComponentArray<Velocity>>();
         gridBounds = std::make_unique<ComponentArray<GridBounds>>();
+        
+        // Create MovementSystem with dependency injection
+        movementSystem = std::make_unique<MovementSystem>(
+            positions.get(),
+            gridPositions.get(),
+            gridMovements.get(),
+            velocities.get(),
+            nullptr,  // accelerations
+            nullptr,  // constraints
+            gridBounds.get(),
+            mockInput.get()
+        );
     }
     
     void TearDown() override {
@@ -38,16 +49,16 @@ protected:
     // Helper: Create entity with basic movement components
     Entity createMovableEntity(int gridX = 0, int gridY = 0) {
         Entity entity = entityManager->createEntity();
-        
+
         // Add required components for grid movement
         uint64_t posBit = getComponentBit<Position>();
         uint64_t gridPosBit = getComponentBit<GridPosition>();
         uint64_t gridMoveBit = getComponentBit<GridMovement>();
-        
-        positions->add(entity.id, Position{static_cast<float>(gridX * 32), static_cast<float>(gridY * 32), 0.0f}, posBit, entity);
-        gridPositions->add(entity.id, GridPosition{gridX, gridY}, gridPosBit, entity);
-        gridMovements->add(entity.id, GridMovement{}, gridMoveBit, entity);
-        
+
+        positions->add(entity.id, Position{static_cast<float>(gridX * 32), static_cast<float>(gridY * 32), 0.0f}, posBit, *entityManager);
+        gridPositions->add(entity.id, GridPosition{gridX, gridY}, gridPosBit, *entityManager);
+        gridMovements->add(entity.id, GridMovement{}, gridMoveBit, *entityManager);
+
         return entity;
     }
     
@@ -66,8 +77,8 @@ protected:
  * Test MovementSystem construction and basic interface
  */
 TEST_F(MovementSystemTest, Construction) {
-    // Test construction without input manager
-    MovementSystem systemNoInput;
+    // Test construction without input manager (using backward-compatible constructor)
+    MovementSystem systemNoInput(static_cast<IInputManager*>(nullptr));
     EXPECT_EQ(systemNoInput.getControlledEntity(), INVALID_ENTITY);
     
     // Test construction with input manager
@@ -188,7 +199,7 @@ TEST_F(MovementSystemTest, MovementBoundsValidation) {
     
     // Add bounds component
     uint64_t boundsBit = getComponentBit<GridBounds>();
-    gridBounds->add(entity.id, GridBounds(0, 0, 10, 10), boundsBit, entity);
+    gridBounds->add(entity.id, GridBounds(0, 0, 10, 10), boundsBit, *entityManager);
     
     // Valid movement within bounds
     bool success = movementSystem->requestGridMovement(entity.id, 8, 7, true);
@@ -263,19 +274,28 @@ TEST_F(MovementSystemTest, UpdateWithNoEntities) {
  */
 TEST_F(MovementSystemTest, UpdateWithMovingEntity) {
     Entity entity = createMovableEntity(0, 0);
-    
+
+    // Debug: Check if components were added correctly
+    Entity* storedEntity = entityManager->getEntityByID(entity.id);
+    ASSERT_NE(storedEntity, nullptr) << "Entity should exist in EntityManager";
+
+    uint64_t requiredMask = getComponentBit<GridPosition>() | getComponentBit<GridMovement>() | getComponentBit<Position>();
+    EXPECT_EQ((storedEntity->componentMask & requiredMask), requiredMask)
+        << "Entity should have all required components. Mask=" << storedEntity->componentMask
+        << " Required=" << requiredMask;
+
     // Start movement from (0,0) to (3,4)
     movementSystem->requestGridMovement(entity.id, 3, 4, false);
-    
-    // Simulate one frame update
-    movementSystem->update(*entityManager, 1.0f);
-    
-    // Movement should have progressed
+
+    // Simulate one frame update with partial deltaTime
+    movementSystem->update(*entityManager, 0.5f);  // 50% progress
+
+    // Movement should have progressed but not completed
     const GridMovement* movement = gridMovements->get(entity.id);
     EXPECT_GT(movement->progress, 0.0f);
     EXPECT_LT(movement->progress, 1.0f);  // Should not complete in one frame
     EXPECT_TRUE(movement->isMoving);
-    
+
     // Position should have been interpolated
     const Position* pos = positions->get(entity.id);
     EXPECT_GT(pos->x, 0.0f);  // Should have moved from start
@@ -324,22 +344,22 @@ TEST_F(MovementSystemTest, InputDrivenMovement) {
     
     // Simulate right arrow key press
     mockInput->simulateKeyPress(KeyCode::Right);
-    
-    // Update system to process input
-    movementSystem->update(*entityManager, 1.0f);
-    
+
+    // Update system to process input (use realistic deltaTime)
+    movementSystem->update(*entityManager, 0.016f);
+
     // Should have started movement to (6, 5)
     const GridMovement* movement = gridMovements->get(entity.id);
     EXPECT_TRUE(movement->isMoving);
     EXPECT_EQ(movement->targetX, 6);
     EXPECT_EQ(movement->targetY, 5);
-    
+
     // Test other directions
     mockInput->reset();
     movementSystem->stopMovement(entity.id, *entityManager, true);
-    
+
     mockInput->simulateKeyPress(KeyCode::Up);
-    movementSystem->update(*entityManager, 1.0f);
+    movementSystem->update(*entityManager, 0.016f);
     
     movement = gridMovements->get(entity.id);
     EXPECT_EQ(movement->targetX, 5);
@@ -355,20 +375,20 @@ TEST_F(MovementSystemTest, InputMovementWithBounds) {
     
     // Add bounds
     uint64_t boundsBit = getComponentBit<GridBounds>();
-    gridBounds->add(entity.id, GridBounds(0, 0, 10, 10), boundsBit, entity);
+    gridBounds->add(entity.id, GridBounds(0, 0, 10, 10), boundsBit, *entityManager);
     
     // Try to move left (should be blocked by bounds)
     mockInput->simulateKeyPress(KeyCode::Left);
-    movementSystem->update(*entityManager, 1.0f);
-    
+    movementSystem->update(*entityManager, 0.016f);
+
     // Should not have started movement
     const GridMovement* movement = gridMovements->get(entity.id);
     EXPECT_FALSE(movement->isMoving);
-    
+
     // Try to move right (should be allowed)
     mockInput->reset();
     mockInput->simulateKeyPress(KeyCode::Right);
-    movementSystem->update(*entityManager, 1.0f);
+    movementSystem->update(*entityManager, 0.016f);
     
     EXPECT_TRUE(movement->isMoving);
     EXPECT_EQ(movement->targetX, 1);
@@ -387,9 +407,9 @@ TEST_F(MovementSystemTest, MultipleEntitiesMovement) {
     movementSystem->requestGridMovement(entity1.id, 2, 3, false);
     movementSystem->requestGridMovement(entity2.id, 7, 8, false);
     // entity3 remains stationary
-    
+
     // Update system
-    movementSystem->update(*entityManager, 1.0f);
+    movementSystem->update(*entityManager, 0.016f);
     
     // Check entity1 is moving
     const GridMovement* movement1 = gridMovements->get(entity1.id);
@@ -411,13 +431,24 @@ TEST_F(MovementSystemTest, MultipleEntitiesMovement) {
  * Test system without input manager
  */
 TEST_F(MovementSystemTest, SystemWithoutInputManager) {
-    MovementSystem systemNoInput;
+    // Create system without input manager but with component arrays
+    MovementSystem systemNoInput(
+        positions.get(),
+        gridPositions.get(),
+        gridMovements.get(),
+        velocities.get(),
+        nullptr,  // accelerations
+        nullptr,  // constraints
+        gridBounds.get(),
+        nullptr   // no input manager
+    );
+    
     Entity entity = createMovableEntity(3, 3);
     
     // Should not crash when updating without input manager
     EXPECT_NO_THROW(systemNoInput.update(*entityManager, 1.0f));
     
-    // Manual movement should still work
+    // Manual movement should still work with component arrays
     bool success = systemNoInput.requestGridMovement(entity.id, 5, 7, false);
     EXPECT_TRUE(success);
     

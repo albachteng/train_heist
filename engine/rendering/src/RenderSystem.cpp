@@ -26,22 +26,22 @@ void RenderSystem::update(float deltaTime, EntityManager& entityManager) {
     lastRenderCount = 0;
     
     // Get all entities for iteration
-    std::vector<Entity> entities = entityManager.getAllEntitiesForIteration();
-    
+    std::vector<const Entity*> entities = entityManager.getAllEntitiesForIteration();
+
     // Get component bitmasks
     uint64_t positionBit = getComponentBit<Position>();
     uint64_t spriteBit = getComponentBit<Sprite>();
     uint64_t renderableBit = getComponentBit<Renderable>();
-    
+
     // Process entities with Position + (Sprite OR Renderable)
-    for (const Entity& entity : entities) {
-        if (!entityManager.isValid(entity)) {
+    for (const Entity* entity : entities) {
+        if (!entityManager.isValid(*entity)) {
             continue; // Skip invalid entities
         }
-        
-        bool hasPosition = (entity.componentMask & positionBit) != 0;
-        bool hasSprite = (entity.componentMask & spriteBit) != 0;
-        bool hasRenderable = (entity.componentMask & renderableBit) != 0;
+
+        bool hasPosition = (entity->componentMask & positionBit) != 0;
+        bool hasSprite = (entity->componentMask & spriteBit) != 0;
+        bool hasRenderable = (entity->componentMask & renderableBit) != 0;
         
         if (hasPosition && (hasSprite || hasRenderable)) {
             lastRenderCount++;
@@ -49,13 +49,13 @@ void RenderSystem::update(float deltaTime, EntityManager& entityManager) {
             if (hasSprite) {
                 // Render sprite entity with placeholder values
                 // TODO: Replace with actual component data access
-                renderSpriteEntity(entity, entityManager);
+                renderSpriteEntity(*entity, entityManager);
             }
-            
+
             if (hasRenderable) {
-                // Render shape entity with placeholder values  
+                // Render shape entity with placeholder values
                 // TODO: Replace with actual component data access
-                renderShapeEntity(entity, entityManager);
+                renderShapeEntity(*entity, entityManager);
             }
         }
     }

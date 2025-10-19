@@ -121,25 +121,26 @@ struct MovementConstraints {
     
     /**
      * Apply constraints to velocity
+     * Order matters: diagonal -> speed limit -> grid snapping
      */
     void applyTo(Velocity& velocity) const {
-        // Apply speed limit
-        if (velocity.magnitude() > maxSpeed) {
-            velocity.normalize();
-            velocity.scale(maxSpeed);
-        }
-        
-        // Apply directional constraints
+        // Apply directional constraints first
         if (!allowDiagonal) {
-            // Force movement to primary axes (whichever is stronger)
-            if (std::abs(velocity.dx) > std::abs(velocity.dy)) {
+            // Force movement to primary axes (whichever is stronger, horizontal wins ties)
+            if (std::abs(velocity.dx) >= std::abs(velocity.dy)) {
                 velocity.dy = 0.0f;
             } else {
                 velocity.dx = 0.0f;
             }
         }
-        
-        // Grid snapping
+
+        // Apply speed limit after directional constraints
+        if (velocity.magnitude() > maxSpeed) {
+            velocity.normalize();
+            velocity.scale(maxSpeed);
+        }
+
+        // Grid snapping last
         if (constrainToGrid) {
             // Quantize velocity to grid-aligned movement
             velocity.dx = std::floor(velocity.dx / gridSize + 0.5f) * gridSize;

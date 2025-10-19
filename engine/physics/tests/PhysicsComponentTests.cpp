@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "../include/Physics.hpp"
 #include "../../ecs/include/ComponentArray.hpp"
+#include "../../ecs/include/EntityManager.hpp"
 #include <cmath>
 
 using namespace ECS;
@@ -356,16 +357,17 @@ TEST_F(VelocityTest, ComponentArrayIntegration) {
     ComponentArray<Velocity> velocities;
     ComponentArray<Acceleration> accelerations;
     ComponentArray<MovementConstraints> constraints;
-    
-    Entity entity{1, 0x7};  // Has all three components
+
+    EntityManager entityManager;
+    Entity entity = entityManager.createEntity();
     uint64_t velBit = 0x1;
-    uint64_t accelBit = 0x2; 
+    uint64_t accelBit = 0x2;
     uint64_t constraintBit = 0x4;
-    
+
     // Add components
-    velocities.add(entity.id, Velocity(5.0f, -3.0f), velBit, entity);
-    accelerations.add(entity.id, Acceleration(0.1f, 0.2f, 0.98f), accelBit, entity);
-    constraints.add(entity.id, MovementConstraints(), constraintBit, entity);
+    velocities.add(entity.id, Velocity(5.0f, -3.0f), velBit, entityManager);
+    accelerations.add(entity.id, Acceleration(0.1f, 0.2f, 0.98f), accelBit, entityManager);
+    constraints.add(entity.id, MovementConstraints(), constraintBit, entityManager);
     
     // Verify storage
     const Velocity* vel = velocities.get(entity.id);

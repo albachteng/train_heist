@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Entity.h"
+#include "EntityManager.hpp"
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
@@ -53,7 +54,7 @@ public:
     ComponentArray& operator=(ComponentArray&&) = default;
 
     // Add component to entity
-    void add(EntityID entityId, const Component& component, uint64_t componentBit, Entity& entity) {
+    void add(EntityID entityId, const Component& component, uint64_t componentBit, EntityManager& entityManager) {
         // Check if entity already has this component
         auto it = entityIndex.find(entityId);
         if (it != entityIndex.end()) {
@@ -61,14 +62,17 @@ public:
             components[it->second] = component;
             return;
         }
-        
+
         // Add new component
         components.push_back(component);
         entityIDs.push_back(entityId);
         entityIndex[entityId] = components.size() - 1;
-        
-        // Update entity bitmask
-        entity.componentMask |= componentBit;
+
+        // Update entity bitmask IN EntityManager's stored entity (not a local copy)
+        Entity* storedEntity = entityManager.getEntityByID(entityId);
+        if (storedEntity) {
+            storedEntity->componentMask |= componentBit;
+        }
     }
     
     // Check if entity has this component
@@ -88,31 +92,34 @@ public:
     }
     
     // Remove component from entity
-    void remove(EntityID entityId, uint64_t componentBit, Entity& entity) {
+    void remove(EntityID entityId, uint64_t componentBit, EntityManager& entityManager) {
         auto it = entityIndex.find(entityId);
         if (it == entityIndex.end()) {
             return; // Entity doesn't have this component
         }
-        
+
         size_t indexToRemove = it->second;
         EntityID lastEntity = entityIDs.back();
-        
+
         // Swap-remove: move last element to the position being removed
         components[indexToRemove] = std::move(components.back());
         entityIDs[indexToRemove] = lastEntity;
-        
+
         // Update index mapping for the moved element
         if (lastEntity != entityId) {
             entityIndex[lastEntity] = indexToRemove;
         }
-        
+
         // Remove the last elements
         components.pop_back();
         entityIDs.pop_back();
         entityIndex.erase(it);
-        
-        // Clear component bit in entity mask
-        entity.componentMask &= ~componentBit;
+
+        // Clear component bit IN EntityManager's stored entity (not a local copy)
+        Entity* storedEntity = entityManager.getEntityByID(entityId);
+        if (storedEntity) {
+            storedEntity->componentMask &= ~componentBit;
+        }
     }
     
     // Get total number of components

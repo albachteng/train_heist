@@ -95,8 +95,10 @@ public:
     
     /**
      * Get all entities for system iteration (includes dead entities that systems should skip)
+     * Returns pointers to entities stored in EntityManager for efficient iteration
+     * with current componentMask values.
      */
-    std::vector<Entity> getAllEntitiesForIteration() const;
+    std::vector<const Entity*> getAllEntitiesForIteration() const;
     
     /**
      * Clear all entities (for testing/reset)

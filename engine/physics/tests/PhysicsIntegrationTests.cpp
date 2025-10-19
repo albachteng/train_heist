@@ -17,7 +17,6 @@ class PhysicsIntegrationTest : public ::testing::Test {
 protected:
     void SetUp() override {
         mockInput = std::make_unique<MockInputManager>();
-        movementSystem = std::make_unique<MovementSystem>(mockInput.get());
         entityManager = std::make_unique<EntityManager>();
         
         // Initialize all component arrays
@@ -28,6 +27,18 @@ protected:
         accelerations = std::make_unique<ComponentArray<Acceleration>>();
         constraints = std::make_unique<ComponentArray<MovementConstraints>>();
         gridBounds = std::make_unique<ComponentArray<GridBounds>>();
+        
+        // Create MovementSystem with dependency injection
+        movementSystem = std::make_unique<MovementSystem>(
+            positions.get(),
+            gridPositions.get(),
+            gridMovements.get(),
+            velocities.get(),
+            accelerations.get(),
+            constraints.get(),
+            gridBounds.get(),
+            mockInput.get()
+        );
     }
     
     void TearDown() override {
@@ -46,10 +57,10 @@ protected:
     /**
      * Create a fully-featured physics entity with all components
      */
-    Entity createPhysicsEntity(int gridX = 0, int gridY = 0, 
+    Entity createPhysicsEntity(int gridX = 0, int gridY = 0,
                               float maxSpeed = 100.0f, bool bounded = false) {
         Entity entity = entityManager->createEntity();
-        
+
         // Get component bits
         uint64_t posBit = getComponentBit<Position>();
         uint64_t gridPosBit = getComponentBit<GridPosition>();
@@ -57,25 +68,25 @@ protected:
         uint64_t velBit = getComponentBit<Velocity>();
         uint64_t accelBit = getComponentBit<Acceleration>();
         uint64_t constraintsBit = getComponentBit<MovementConstraints>();
-        
+
         // Add core components
-        positions->add(entity.id, Position{static_cast<float>(gridX * 32), static_cast<float>(gridY * 32), 0.0f}, posBit, entity);
-        gridPositions->add(entity.id, GridPosition{gridX, gridY}, gridPosBit, entity);
-        gridMovements->add(entity.id, GridMovement{}, gridMoveBit, entity);
-        velocities->add(entity.id, Velocity{}, velBit, entity);
-        accelerations->add(entity.id, Acceleration{}, accelBit, entity);
-        
+        positions->add(entity.id, Position{static_cast<float>(gridX * 32), static_cast<float>(gridY * 32), 0.0f}, posBit, *entityManager);
+        gridPositions->add(entity.id, GridPosition{gridX, gridY}, gridPosBit, *entityManager);
+        gridMovements->add(entity.id, GridMovement{}, gridMoveBit, *entityManager);
+        velocities->add(entity.id, Velocity{}, velBit, *entityManager);
+        accelerations->add(entity.id, Acceleration{}, accelBit, *entityManager);
+
         // Add movement constraints
         MovementConstraints entityConstraints;
         entityConstraints.maxSpeed = maxSpeed;
-        constraints->add(entity.id, entityConstraints, constraintsBit, entity);
-        
+        constraints->add(entity.id, entityConstraints, constraintsBit, *entityManager);
+
         // Optional bounds
         if (bounded) {
             uint64_t boundsBit = getComponentBit<GridBounds>();
-            gridBounds->add(entity.id, GridBounds(0, 0, 20, 20), boundsBit, entity);
+            gridBounds->add(entity.id, GridBounds(0, 0, 20, 20), boundsBit, *entityManager);
         }
-        
+
         return entity;
     }
     
@@ -121,8 +132,8 @@ TEST_F(PhysicsIntegrationTest, CompleteMovementPipeline) {
     
     // Trigger right movement via input
     mockInput->simulateKeyPress(KeyCode::Right);
-    movementSystem->update(*entityManager, 1.0f);
-    
+    movementSystem->update(*entityManager, 0.1f);  // Partial progress with globalSpeed=5.0
+
     // Movement should have started
     const GridMovement* movement = gridMovements->get(entity.id);
     EXPECT_TRUE(movement->isMoving);
@@ -189,15 +200,15 @@ TEST_F(PhysicsIntegrationTest, MovementWithBounds) {
     
     // Try to move left (should be blocked)
     mockInput->simulateKeyPress(KeyCode::Left);
-    movementSystem->update(*entityManager, 1.0f);
-    
+    movementSystem->update(*entityManager, 0.016f);
+
     const GridMovement* movement = gridMovements->get(entity.id);
     EXPECT_FALSE(movement->isMoving);  // Should be blocked
-    
+
     // Try to move right (should work)
     mockInput->reset();
     mockInput->simulateKeyPress(KeyCode::Right);
-    movementSystem->update(*entityManager, 1.0f);
+    movementSystem->update(*entityManager, 0.016f);
     
     EXPECT_TRUE(movement->isMoving);  // Should start movement
     EXPECT_EQ(movement->targetX, 1);
@@ -426,8 +437,8 @@ TEST_F(PhysicsIntegrationTest, MovementInterruptionAndQueuing) {
     
     // Start first movement
     movementSystem->requestGridMovement(entity.id, 5, 5, false);
-    movementSystem->update(*entityManager, 1.0f);
-    
+    movementSystem->update(*entityManager, 0.25f);  // Partial progress with globalSpeed=2.0
+
     const GridMovement* movement = gridMovements->get(entity.id);
     EXPECT_TRUE(movement->isMoving);
     EXPECT_GT(movement->progress, 0.0f);

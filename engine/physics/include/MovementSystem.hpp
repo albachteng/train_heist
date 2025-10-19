@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../ecs/include/EntityManager.hpp"
+#include "../../ecs/include/ComponentArray.hpp"
 #include "../../ecs/components/include/Transform.hpp"
 #include "../../ecs/systems/include/IInputManager.hpp"
 #include "GridMovement.hpp"
@@ -24,10 +25,34 @@ namespace ECS {
 class MovementSystem {
 public:
     /**
-     * Constructor with optional input manager for real-time movement
+     * Constructor with dependency injection for component arrays and input manager
      */
-    explicit MovementSystem(IInputManager* inputManager = nullptr);
+    MovementSystem(ComponentArray<Position>* positions = nullptr,
+                   ComponentArray<GridPosition>* gridPositions = nullptr,
+                   ComponentArray<GridMovement>* gridMovements = nullptr,
+                   ComponentArray<Velocity>* velocities = nullptr,
+                   ComponentArray<Acceleration>* accelerations = nullptr,
+                   ComponentArray<MovementConstraints>* constraints = nullptr,
+                   ComponentArray<GridBounds>* gridBounds = nullptr,
+                   IInputManager* inputManager = nullptr);
+                   
+    /**
+     * Backward compatible constructor for tests (only input manager)
+     */
+    explicit MovementSystem(IInputManager* inputManager);
+    
     ~MovementSystem() = default;
+    
+    /**
+     * Set component arrays after construction (for lazy injection)
+     */
+    void setComponentArrays(ComponentArray<Position>* positions,
+                           ComponentArray<GridPosition>* gridPositions,
+                           ComponentArray<GridMovement>* gridMovements,
+                           ComponentArray<Velocity>* velocities = nullptr,
+                           ComponentArray<Acceleration>* accelerations = nullptr,
+                           ComponentArray<MovementConstraints>* constraints = nullptr,
+                           ComponentArray<GridBounds>* gridBounds = nullptr);
     
     /**
      * Update all movement and animation
@@ -167,7 +192,14 @@ private:
     void interpolatePosition(float startX, float startY, float targetX, float targetY, 
                            float progress, float& resultX, float& resultY) const;
     
-    // Dependencies
+    // Dependencies - Component Arrays
+    ComponentArray<Position>* positions;
+    ComponentArray<GridPosition>* gridPositions;
+    ComponentArray<GridMovement>* gridMovements;
+    ComponentArray<Velocity>* velocities;
+    ComponentArray<Acceleration>* accelerations;
+    ComponentArray<MovementConstraints>* constraints;
+    ComponentArray<GridBounds>* gridBounds;
     IInputManager* inputManager;
     
     // State

@@ -284,13 +284,13 @@ TEST_F(EntityManagerTest, DeadEntityIterationPattern) {
     manager.destroyEntity(entity3);
     
     // Get all entities for system iteration (including dead ones)
-    std::vector<Entity> allEntities = manager.getAllEntitiesForIteration(); // New method
+    std::vector<const Entity*> allEntities = manager.getAllEntitiesForIteration(); // New method
     EXPECT_EQ(allEntities.size(), 4); // Should include dead entities
-    
+
     // Count valid entities during iteration (what systems would do)
     int validCount = 0;
-    for (const Entity& entity : allEntities) {
-        if (manager.isValid(entity)) {
+    for (const Entity* entity : allEntities) {
+        if (manager.isValid(*entity)) {
             validCount++;
         }
     }
