@@ -33,10 +33,11 @@ struct GridMovement {
     GridMovement() = default;
     
     /**
-     * Constructor for immediate movement setup
+     * Constructor for movement setup (does not auto-start)
+     * Movement must be explicitly started via requestGridMovement() or setting isMoving=true
      */
     GridMovement(int targetX, int targetY, float speed = 1.0f)
-        : targetX(targetX), targetY(targetY), speed(speed), isMoving(true) {}
+        : targetX(targetX), targetY(targetY), speed(speed), isMoving(false) {}
         
     /**
      * Check if movement is complete

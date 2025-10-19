@@ -40,13 +40,36 @@ TEST_F(GridMovementTest, DefaultConstruction) {
  */
 TEST_F(GridMovementTest, ParameterizedConstruction) {
     GridMovement movement(5, 10, 2.5f);
-    
+
     EXPECT_EQ(movement.targetX, 5);
     EXPECT_EQ(movement.targetY, 10);
     EXPECT_FLOAT_EQ(movement.speed, 2.5f);
-    EXPECT_TRUE(movement.isMoving);  // Should auto-start movement
+    EXPECT_FALSE(movement.isMoving);  // Constructor prepares but doesn't start
     EXPECT_FLOAT_EQ(movement.progress, 0.0f);
     EXPECT_FALSE(movement.hasPendingMove);
+}
+
+/**
+ * Test explicit movement start pattern
+ */
+TEST_F(GridMovementTest, ExplicitMovementStart) {
+    GridMovement movement(5, 10, 2.5f);
+
+    // Constructor prepares movement but doesn't start it
+    EXPECT_FALSE(movement.isMoving);
+    EXPECT_EQ(movement.targetX, 5);
+    EXPECT_EQ(movement.targetY, 10);
+
+    // Explicit start required (normally done via requestGridMovement())
+    movement.isMoving = true;
+    EXPECT_TRUE(movement.isMoving);
+
+    // Movement can now progress
+    movement.progress = 0.5f;
+    EXPECT_FALSE(movement.isComplete());
+
+    movement.progress = 1.0f;
+    EXPECT_TRUE(movement.isComplete());
 }
 
 /**
