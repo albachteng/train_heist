@@ -24,7 +24,7 @@ jobs:
           libx11-dev libxrandr-dev libxcursor-dev libxi-dev \
           libudev-dev libgl1-mesa-dev \
           libfreetype6-dev libflac-dev libogg-dev libvorbis-dev \
-          libopenal-dev
+          libopenal-dev xvfb
 
     - name: Cache SFML build
       id: cache-sfml
@@ -64,8 +64,9 @@ jobs:
     - name: Run unit tests
       run: make test
 
-    - name: Run integration tests
-      run: make integration
+    - name: Run integration tests (with virtual display)
+      timeout-minutes: 5
+      run: xvfb-run -a --auto-servernum make integration
 
     - name: Test summary
       if: always()
