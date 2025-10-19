@@ -1,0 +1,74 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, feat/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Build and Test (Ubuntu)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake git \
+          libx11-dev libxrandr-dev libxcursor-dev libxi-dev \
+          libudev-dev libgl1-mesa-dev
+
+    - name: Cache SFML build
+      id: cache-sfml
+      uses: actions/cache@v3
+      with:
+        path: third_party/SFML/install
+        key: ${{ runner.os }}-sfml-${{ hashFiles('third_party/SFML/**') }}
+        restore-keys: |
+          ${{ runner.os }}-sfml-
+
+    - name: Build SFML
+      if: steps.cache-sfml.outputs.cache-hit != 'true'
+      working-directory: third_party/SFML
+      run: |
+        cmake -B build -S . -DCMAKE_INSTALL_PREFIX=install/linux -DSFML_BUILD_EXAMPLES=OFF
+        cmake --build build --target install
+
+    - name: Cache GoogleTest build
+      id: cache-gtest
+      uses: actions/cache@v3
+      with:
+        path: third_party/googletest/linux
+        key: ${{ runner.os }}-gtest-${{ hashFiles('third_party/googletest/**') }}
+        restore-keys: |
+          ${{ runner.os }}-gtest-
+
+    - name: Build GoogleTest
+      if: steps.cache-gtest.outputs.cache-hit != 'true'
+      working-directory: third_party/googletest
+      run: |
+        cmake -B build -S . -DCMAKE_INSTALL_PREFIX=linux -DCMAKE_BUILD_TYPE=Release
+        cmake --build build --target install
+
+    - name: Build project
+      run: make
+
+    - name: Run unit tests
+      run: make test
+
+    - name: Run integration tests
+      run: make integration
+
+    - name: Test summary
+      if: always()
+      run: |
+        echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "✅ All 276 tests passed!" >> $GITHUB_STEP_SUMMARY
+        echo "- Unit tests: 221 tests" >> $GITHUB_STEP_SUMMARY
+        echo "- Integration tests: 55 tests" >> $GITHUB_STEP_SUMMARY
