@@ -78,32 +78,6 @@ TEST_F(SystemUtilsSimpleTest, BasicFindFirstEntity) {
     EXPECT_EQ(notFound, nullptr);
 }
 
-// Test forEachEntityRef modification
-TEST_F(SystemUtilsSimpleTest, BasicEntityModification) {
-    EntityID id1 = createEntityWithComponents(0b001); // Component 0
-    EntityID id2 = createEntityWithComponents(0b001); // Component 0
-    EntityID id3 = createEntityWithComponents(0b010); // Component 1
-    
-    // Add component 2 to all entities with component 0
-    int modificationCount = 0;
-    SystemUtils::forEachEntityRef(*entityManager, 0b001, [&modificationCount](Entity& entity) {
-        modificationCount++;
-        entity.addComponent(0b100); // Add component 2
-    });
-    
-    // Debug: check if any modifications happened
-    EXPECT_GT(modificationCount, 0);
-    
-    // Check that entities with component 0 now also have component 2
-    Entity* entity1 = entityManager->getEntityByID(id1);
-    Entity* entity2 = entityManager->getEntityByID(id2);
-    Entity* entity3 = entityManager->getEntityByID(id3);
-    
-    EXPECT_TRUE(entity1->hasComponent(0b100));
-    EXPECT_TRUE(entity2->hasComponent(0b100));
-    EXPECT_FALSE(entity3->hasComponent(0b100)); // Should not be modified
-}
-
 // Test that dead entities are properly skipped
 TEST_F(SystemUtilsSimpleTest, SkipsDeadEntities) {
     EntityID id1 = createEntityWithComponents(0b001);

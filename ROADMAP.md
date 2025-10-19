@@ -11,12 +11,13 @@ We're using a **two-track approach** that delivers value quickly while building 
 
 ## 📊 Current Status
 
-### ✅ Completed (Phase 0: ECS Foundation + Rendering + Input Implementation)
+### ✅ Completed (Phase 0-1: ECS Foundation + Rendering + Input + Physics Implementation)
 - **ECS Core**: Entity/component management with bitmask tracking ✅ **COMPLETED**
 - **Systems Layer**: Priority-based system execution with dependency injection ✅ **COMPLETED**
 - **Event System**: Typed event queues for decoupled communication ✅ **COMPLETED**
 - **Component Registry**: Automatic bit assignment for component types ✅ **COMPLETED**
 - **SystemUtils**: Helper functions for common ECS operations ✅ **COMPLETED**
+- **Entity Iteration**: Fixed getAllEntitiesForIteration() to return pointers for current componentMask access ✅ **COMPLETED**
 - **Logging System**: Multi-level logging with console/file output and global macros ✅ **COMPLETED**
 - **Transform Components**: Position, Rotation, Scale, GridPosition with 2.5D coordinate utilities ✅ **COMPLETED**
 - **Rendering Components**: Sprite and Renderable POD components with ZII compliance ✅ **COMPLETED**
@@ -26,14 +27,17 @@ We're using a **two-track approach** that delivers value quickly while building 
 - **Mock Testing Infrastructure**: MockRenderer, MockWindowManager, MockResourceManager, MockInputManager ✅ **COMPLETED**
 - **Event Conversion Layer**: SFML → Engine event abstraction with comprehensive testing ✅ **COMPLETED**
 - **Input System**: SFMLInputManager with keyboard/mouse processing, InputSystem with ECS integration ✅ **COMPLETED**
+- **Physics Components**: GridMovement, Velocity, Acceleration, MovementConstraints with full ZII compliance ✅ **COMPLETED**
+- **Movement System**: Grid-based movement with queued actions, bounds validation, smooth interpolation ✅ **COMPLETED**
+- **Turn-Based Support**: Manual movement execution, queued movement system for turn-based gameplay ✅ **COMPLETED**
 - **Interactive Demo**: Working keyboard-controlled entity with mouse logging via complete input pipeline ✅ **COMPLETED**
 - **Two-Tier Testing**: Unit tests + Integration tests with separate build targets ✅ **COMPLETED**
-- **Test Coverage**: 295+ comprehensive tests (unit + integration + input system tests) ✅ **CURRENT**
+- **Test Coverage**: 276 comprehensive tests (100% pass rate) covering all engine systems ✅ **CURRENT**
 
-### 🚧 In Progress (Phase 1: Grid-Based Physics System Implementation)
-- **Current Status**: Input system complete with working interactive demo, ready for physics system
-- **Next Priority**: Grid-based physics components (Velocity, Acceleration, GridMovement) with smooth animation support
-- **Focus**: Design physics system to support discrete grid logic with smooth visual transitions
+### 🚧 In Progress (Phase 2: Main.cpp Integration & Multi-Entity Rendering)
+- **Current Status**: Physics system fully implemented and tested, ready for main.cpp integration
+- **Next Priority**: Update main.cpp demo to use MovementSystem with grid-based movement
+- **Focus**: Demonstrate discrete grid movement with smooth visual interpolation
 
 ## 🚀 Development Phases
 
@@ -255,8 +259,8 @@ LOG_ERROR("Renderer", "Failed to load texture: {}", filename);
 ## 📈 Metrics and Success Tracking
 
 ### **Technical Metrics**
-- Test coverage: Currently 256 passing tests (201 unit + 55 integration tests)
-  - Unit tests: ECS core, logging, systems, components, and mock implementations
+- Test coverage: Currently 276 passing tests (221 unit + 55 integration tests)
+  - Unit tests: ECS core, logging, systems, components, physics, and mock implementations
   - Integration tests: SFML wrapper validation, color conversion, event handling
 - Build system: Two-tier testing (`make test` for fast unit tests, `make integration` for SFML tests)
 - Build time: Target <10 seconds for incremental builds

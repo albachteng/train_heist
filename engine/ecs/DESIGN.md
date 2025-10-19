@@ -47,7 +47,9 @@ struct Entity {
 struct EntityHandle {
     EntityID id;
     uint32_t generation;
-    // Opaque reference for external systems - prevents direct component mask access
+    // Safe ID snapshot for external references (not a pointer)
+    // IMPORTANT: Handles do NOT auto-update with component changes
+    // Must re-fetch via EntityManager::getEntity(handle) to see current state
     // Generational safety: detects stale references when entity IDs are reused
     // API encapsulation: forces validation through ECS manager entry points
 };
@@ -80,14 +82,16 @@ Entity* current = entityManager.getEntityByID(entityId);
 
 ### System Iteration Pattern
 ```cpp
-// Systems iterate over all entities (including dead ones)
-for (const Entity& entity : entityManager.getAllEntitiesForIteration()) {
-    if (!entityManager.isValid(entity)) {
+// Systems iterate over entity pointers to access current componentMask
+std::vector<const Entity*> entities = entityManager.getAllEntitiesForIteration();
+for (const Entity* entity : entities) {
+    if (!entityManager.isValid(*entity)) {
         continue; // Skip dead entities
     }
-    
+
     // Process only living entities with required components
-    if ((entity.componentMask & requiredMask) == requiredMask) {
+    // Pointer access ensures we see current componentMask after ComponentArray updates
+    if ((entity->componentMask & requiredMask) == requiredMask) {
         // Update entity...
     }
 }
@@ -374,14 +378,24 @@ systemManager.updateAll(deltaTime, entityManager);
 Helper functions for common ECS operations:
 
 ```cpp
-// Iterate entities with required components
-SystemUtils::forEachEntity(entityManager, positionMask | velocityMask, 
-    [](const Entity& entity) {
-        // Process entity
+// Iterate entities with required components (passes const Entity& to processor)
+SystemUtils::forEachEntity(entityManager, positionMask | velocityMask,
+    [&](const Entity& entity) {
+        // Process entity (read-only access)
+        // To modify components, use ComponentArray methods
+        Position* pos = positions.get(entity.id);
+        Velocity* vel = velocities.get(entity.id);
+        if (pos && vel) {
+            pos->x += vel->dx;
+            pos->y += vel->dy;
+        }
     });
 
 // Count matching entities
 size_t count = SystemUtils::countEntitiesWithComponents(entityManager, movableMask);
+
+// Find first matching entity
+Entity* entity = SystemUtils::findFirstEntityWithComponents(entityManager, playerMask);
 ```
 
 ## Iteration / Queries
