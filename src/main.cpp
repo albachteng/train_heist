@@ -10,20 +10,23 @@
 #include "SFMLWindowManager.hpp"
 #include "../engine/input/include/SFMLInputManager.hpp"
 #include "../engine/ecs/systems/include/InputSystem.hpp"
+#include "../engine/physics/include/GridMovement.hpp"
+#include "../engine/physics/include/MovementSystem.hpp"
 #include "SystemManager.hpp"
 #include "Transform.hpp"
 #include <cmath>
 #include <memory>
 
 /**
- * Train Heist - Interactive Input Demo
+ * Train Heist - Grid-Based Movement Demo
  *
  * Demonstrates the complete engine pipeline:
  * 1. SFML window creation and management
- * 2. ECS entity creation with Position and Renderable components
- * 3. Input system integration with keyboard and mouse handling
- * 4. Interactive entity control with arrow keys
- * 5. Mouse click logging and real SFML graphics output
+ * 2. ECS entity creation with Position, Renderable, GridMovement, and GridBounds
+ * 3. Grid-based physics with smooth visual interpolation
+ * 4. MovementSystem with queued movement requests
+ * 5. Interactive grid navigation with arrow keys
+ * 6. Mouse click logging and real SFML graphics output
  */
 
 using namespace ECS;
@@ -60,67 +63,143 @@ int main() {
     // Create component arrays
     ComponentArray<Position> positionComponents;
     ComponentArray<Renderable> renderableComponents;
+    ComponentArray<GridPosition> gridPositionComponents;
+    ComponentArray<GridMovement> gridMovementComponents;
+    ComponentArray<GridBounds> gridBoundsComponents;
 
-    LOG_INFO("ECS", "Setting up interactive demo scene...");
+    // Create MovementSystem with component array pointers
+    auto movementSystem = std::make_unique<MovementSystem>(
+        &positionComponents,
+        &gridPositionComponents,
+        &gridMovementComponents,
+        nullptr,  // velocities
+        nullptr,  // accelerations
+        nullptr,  // constraints
+        &gridBoundsComponents,
+        nullptr   // inputManager
+    );
+
+    // Configure grid cell size for coordinate conversion
+    const float CELL_SIZE = 64.0f;
+    movementSystem->setGridCellSize(CELL_SIZE);
+
+    LOG_INFO("ECS", "Setting up grid-based movement demo...");
 
     // Get component bits
     uint64_t positionBit = getComponentBit<Position>();
     uint64_t renderableBit = getComponentBit<Renderable>();
+    uint64_t gridPositionBit = getComponentBit<GridPosition>();
+    uint64_t gridMovementBit = getComponentBit<GridMovement>();
+    uint64_t gridBoundsBit = getComponentBit<GridBounds>();
+
+    // Grid configuration (matches MovementSystem cell size)
+    const int GRID_WIDTH = 10;      // 10 cells wide (640 pixels)
+    const int GRID_HEIGHT = 8;      // 8 cells tall (512 pixels)
 
     // Create some demo entities with rectangles (no texture files needed)
 
-    // Red rectangle in top-left - CONTROLLABLE with arrow keys
+    // Red rectangle in top-left - CONTROLLABLE with arrow keys on GRID
     Entity redRect = entityManager.createEntity();
-    positionComponents.add(redRect.id, {50.0f, 50.0f, 0.0f}, positionBit,
-                           entityManager);
+
+    // Start at grid position (1, 1)
+    GridPosition startGridPos = {1, 1};
+    positionComponents.add(redRect.id,
+                          {startGridPos.x * CELL_SIZE, startGridPos.y * CELL_SIZE, 0.0f},
+                          positionBit, entityManager);
     renderableComponents.add(redRect.id,
-                             {100.0f, 100.0f, 1.0f, 0.0f, 0.0f, 1.0f},
+                             {CELL_SIZE, CELL_SIZE, 1.0f, 0.0f, 0.0f, 1.0f},  // Red, cell-sized
                              renderableBit, entityManager);
-    
+    gridPositionComponents.add(redRect.id, startGridPos, gridPositionBit, entityManager);
+    gridMovementComponents.add(redRect.id, GridMovement(), gridMovementBit, entityManager);
+    gridBoundsComponents.add(redRect.id,
+                            GridBounds(0, 0, GRID_WIDTH - 1, GRID_HEIGHT - 1),
+                            gridBoundsBit, entityManager);
+
     // Set red rectangle as the controllable entity
     inputSystem->setControlledEntity(redRect.id);
-    inputSystem->setMovementSpeed(5.0f); // Moderate movement speed
+    LOG_INFO("Demo", "Red square: Use ARROW KEYS to move on grid (cell size: " +
+             std::to_string((int)CELL_SIZE) + "px)");
 
-    // Green rectangle in top-right
+    // Green square at top-right corner of grid (9, 0)
     Entity greenRect = entityManager.createEntity();
-    positionComponents.add(greenRect.id, {650.0f, 50.0f, 0.0f}, positionBit,
-                           entityManager);
+    GridPosition greenGridPos = {9, 0};
+    positionComponents.add(greenRect.id,
+                          {greenGridPos.x * CELL_SIZE, greenGridPos.y * CELL_SIZE, 0.0f},
+                          positionBit, entityManager);
     renderableComponents.add(greenRect.id,
-                             {100.0f, 100.0f, 0.0f, 1.0f, 0.0f, 1.0f},
+                             {CELL_SIZE, CELL_SIZE, 0.0f, 1.0f, 0.0f, 1.0f},  // Green, cell-sized
                              renderableBit, entityManager);
+    gridPositionComponents.add(greenRect.id, greenGridPos, gridPositionBit, entityManager);
 
-    // Blue rectangle in bottom-left
+    // Blue square at bottom-left (0, 7)
     Entity blueRect = entityManager.createEntity();
-    positionComponents.add(blueRect.id, {50.0f, 450.0f, 0.0f}, positionBit,
-                           entityManager);
+    GridPosition blueGridPos = {0, 7};
+    positionComponents.add(blueRect.id,
+                          {blueGridPos.x * CELL_SIZE, blueGridPos.y * CELL_SIZE, 0.0f},
+                          positionBit, entityManager);
     renderableComponents.add(blueRect.id,
-                             {100.0f, 100.0f, 0.0f, 0.0f, 1.0f, 1.0f},
+                             {CELL_SIZE, CELL_SIZE, 0.0f, 0.0f, 1.0f, 1.0f},  // Blue, cell-sized
                              renderableBit, entityManager);
+    gridPositionComponents.add(blueRect.id, blueGridPos, gridPositionBit, entityManager);
 
-    // Yellow rectangle in center (for animation)
+    // Yellow square - AUTOMATIC MOVEMENT (moves in rectangular pattern)
     Entity yellowRect = entityManager.createEntity();
-    positionComponents.add(yellowRect.id, {350.0f, 250.0f, 0.0f}, positionBit,
-                           entityManager);
+    GridPosition yellowGridPos = {4, 3};  // Start at top-left of pattern
+    positionComponents.add(yellowRect.id,
+                          {yellowGridPos.x * CELL_SIZE, yellowGridPos.y * CELL_SIZE, 0.0f},
+                          positionBit, entityManager);
     renderableComponents.add(yellowRect.id,
-                             {100.0f, 100.0f, 1.0f, 1.0f, 0.0f, 0.8f},
+                             {CELL_SIZE, CELL_SIZE, 1.0f, 1.0f, 0.0f, 1.0f},  // Yellow, cell-sized
                              renderableBit, entityManager);
+    gridPositionComponents.add(yellowRect.id, yellowGridPos, gridPositionBit, entityManager);
+    gridMovementComponents.add(yellowRect.id, GridMovement(), gridMovementBit, entityManager);
+    gridBoundsComponents.add(yellowRect.id,
+                            GridBounds(0, 0, GRID_WIDTH - 1, GRID_HEIGHT - 1),
+                            gridBoundsBit, entityManager);
 
-    // Semi-transparent purple rectangle overlapping center
+    // Purple square in center (5, 4)
     Entity purpleRect = entityManager.createEntity();
-    positionComponents.add(purpleRect.id, {300.0f, 200.0f, 0.0f}, positionBit,
-                           entityManager);
+    GridPosition purpleGridPos = {5, 4};
+    positionComponents.add(purpleRect.id,
+                          {purpleGridPos.x * CELL_SIZE, purpleGridPos.y * CELL_SIZE, 0.0f},
+                          positionBit, entityManager);
     renderableComponents.add(purpleRect.id,
-                             {200.0f, 200.0f, 1.0f, 0.0f, 1.0f, 0.5f},
+                             {CELL_SIZE, CELL_SIZE, 0.5f, 0.0f, 0.5f, 1.0f},  // Purple, cell-sized
                              renderableBit, entityManager);
+    gridPositionComponents.add(purpleRect.id, purpleGridPos, gridPositionBit, entityManager);
 
     LOG_INFO("ECS", "Created " +
                         std::to_string(entityManager.getActiveEntityCount()) +
                         " demo entities");
-    LOG_INFO("Main", "=== INTERACTIVE DEMO CONTROLS ===");
-    LOG_INFO("Main", "- Use ARROW KEYS to move the red rectangle");
-    LOG_INFO("Main", "- Click LEFT/RIGHT mouse buttons to see click logging");
-    LOG_INFO("Main", "- Press ESCAPE or close window to exit");
-    LOG_INFO("Main", "Starting interactive demo...");
+    LOG_INFO("Main", "=== GRID-BASED MOVEMENT DEMO ===");
+    LOG_INFO("Main", "Grid Configuration:");
+    LOG_INFO("Main", "  - Size: " + std::to_string(GRID_WIDTH) + "x" +
+             std::to_string(GRID_HEIGHT) + " cells (" +
+             std::to_string((int)CELL_SIZE) + "px each)");
+    LOG_INFO("Main", "  - Total area: " + std::to_string(GRID_WIDTH * (int)CELL_SIZE) + "x" +
+             std::to_string(GRID_HEIGHT * (int)CELL_SIZE) + " pixels");
+    LOG_INFO("Main", "Entity Positions:");
+    LOG_INFO("Main", "  - RED (controllable): grid (1, 1)");
+    LOG_INFO("Main", "  - GREEN: grid (9, 0) - top-right corner");
+    LOG_INFO("Main", "  - BLUE: grid (0, 7) - bottom-left corner");
+    LOG_INFO("Main", "  - YELLOW (automatic): grid (4, 3) - moves in rectangular pattern");
+    LOG_INFO("Main", "  - PURPLE: grid (5, 4) - center");
+    LOG_INFO("Main", "Controls:");
+    LOG_INFO("Main", "  - Use ARROW KEYS to move red square on grid");
+    LOG_INFO("Main", "  - Yellow square moves automatically to demonstrate grid system");
+    LOG_INFO("Main", "  - Movement uses smooth interpolation between cells");
+    LOG_INFO("Main", "  - Press ESCAPE or close window to exit");
+    LOG_INFO("Main", "Starting grid-based movement demo...");
+
+    // Automatic movement pattern for yellow square (rectangular loop)
+    const GridPosition autoMovementPattern[] = {
+        {4, 3},  // Top-left
+        {6, 3},  // Top-right
+        {6, 5},  // Bottom-right
+        {4, 5}   // Bottom-left
+    };
+    const int patternSize = 4;
+    int currentPatternIndex = 0;
 
     // Main game loop
     int frameCount = 0;
@@ -139,34 +218,72 @@ int main() {
         windowManager->closeWindow();
       }
       
-      // Handle keyboard input for controlled entity manually 
-      // (since our InputSystem logs but doesn't move entities directly)
+      // Handle grid-based keyboard input for controlled entity
       EntityID controlledId = inputSystem->getControlledEntity();
       if (controlledId != INVALID_ENTITY) {
-        Position* controlledPos = positionComponents.get(controlledId);
-        if (controlledPos) {
-          float moveSpeed = inputSystem->getMovementSpeed();
-          
-          if (inputManager->isKeyPressed(KeyCode::Left)) {
-            controlledPos->x -= moveSpeed;
+        GridPosition* gridPos = gridPositionComponents.get(controlledId);
+        GridMovement* gridMove = gridMovementComponents.get(controlledId);
+        GridBounds* bounds = gridBoundsComponents.get(controlledId);
+
+        if (gridPos && gridMove && bounds) {
+          // Only queue new movement if not currently moving
+          if (!gridMove->isMoving) {
+            int targetX = gridPos->x;
+            int targetY = gridPos->y;
+
+            if (inputManager->wasKeyPressed(KeyCode::Left)) {
+              targetX = gridPos->x - 1;
+              targetY = gridPos->y;
+            } else if (inputManager->wasKeyPressed(KeyCode::Right)) {
+              targetX = gridPos->x + 1;
+              targetY = gridPos->y;
+            } else if (inputManager->wasKeyPressed(KeyCode::Up)) {
+              targetX = gridPos->x;
+              targetY = gridPos->y - 1;
+            } else if (inputManager->wasKeyPressed(KeyCode::Down)) {
+              targetX = gridPos->x;
+              targetY = gridPos->y + 1;
+            }
+
+            // Request movement if target changed and is valid
+            if ((targetX != gridPos->x || targetY != gridPos->y) &&
+                bounds->isValid(targetX, targetY)) {
+              gridMove->targetX = targetX;
+              gridMove->targetY = targetY;
+              gridMove->progress = 0.0f;
+              gridMove->isMoving = true;
+              LOG_INFO("Movement", "Moving to grid cell (" + std::to_string(targetX) +
+                       ", " + std::to_string(targetY) + ")");
+            }
           }
-          if (inputManager->isKeyPressed(KeyCode::Right)) {
-            controlledPos->x += moveSpeed;
-          }
-          if (inputManager->isKeyPressed(KeyCode::Up)) {
-            controlledPos->y -= moveSpeed;
-          }
-          if (inputManager->isKeyPressed(KeyCode::Down)) {
-            controlledPos->y += moveSpeed;
-          }
-          
-          // Keep entity within window bounds
-          if (controlledPos->x < 0) controlledPos->x = 0;
-          if (controlledPos->y < 0) controlledPos->y = 0;
-          if (controlledPos->x > 700) controlledPos->x = 700; // 800 - 100 (width)
-          if (controlledPos->y > 500) controlledPos->y = 500; // 600 - 100 (height)
         }
       }
+
+      // Automatic movement for yellow square (demonstrates grid system with multiple entities)
+      GridPosition* yellowGridPos = gridPositionComponents.get(yellowRect.id);
+      GridMovement* yellowGridMove = gridMovementComponents.get(yellowRect.id);
+      GridBounds* yellowBounds = gridBoundsComponents.get(yellowRect.id);
+
+      if (yellowGridPos && yellowGridMove && yellowBounds) {
+        // If yellow square finished moving, queue next position in pattern
+        if (!yellowGridMove->isMoving) {
+          // Move to next position in pattern
+          currentPatternIndex = (currentPatternIndex + 1) % patternSize;
+          const GridPosition& nextPos = autoMovementPattern[currentPatternIndex];
+
+          if (yellowBounds->isValid(nextPos.x, nextPos.y)) {
+            yellowGridMove->targetX = nextPos.x;
+            yellowGridMove->targetY = nextPos.y;
+            yellowGridMove->progress = 0.0f;
+            yellowGridMove->isMoving = true;
+            LOG_INFO("AutoMovement", "Yellow square moving to grid cell (" +
+                     std::to_string(nextPos.x) + ", " + std::to_string(nextPos.y) + ")");
+          }
+        }
+      }
+
+      // Update MovementSystem (handles smooth interpolation)
+      movementSystem->update(entityManager, 0.016f);  // ~60 FPS (16ms)
 
       // Begin rendering frame
       renderer->beginFrame();
@@ -194,19 +311,8 @@ int main() {
       // End rendering frame
       renderer->endFrame();
 
-      // Simple animation: move yellow rectangle in a circle
-      frameCount++;
-      if (frameCount % 120 == 0) { // Every 2 seconds at 60 FPS
-        Position *yellowPos = positionComponents.get(yellowRect.id);
-        if (yellowPos) {
-          float angle = (frameCount / 120.0f) * 3.14159f * 2.0f /
-                        10.0f; // Full circle over 20 seconds
-          yellowPos->x = 350.0f + 100.0f * std::cos(angle);
-          yellowPos->y = 250.0f + 100.0f * std::sin(angle);
-        }
-      }
-
       // Print frame info occasionally
+      frameCount++;
       if (frameCount % 300 == 0) { // Every 5 seconds
         LOG_INFO("Render",
                  "Frame " + std::to_string(frameCount) + " - Entities: " +

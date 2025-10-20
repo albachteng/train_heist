@@ -193,7 +193,7 @@ The ECS core, systems layer, logging system, rendering system, input system, and
 
 **Next Priority**: Main.cpp integration to demonstrate grid-based movement in action
 
-**Development Progress**: See [ROADMAP.md](ROADMAP.md) for current development plan, progress tracking, and next milestones.
+**Development Progress**: See [docs/ROADMAP.md](docs/ROADMAP.md) for current development plan, progress tracking, and next milestones.
 
 ### Getting Started
 
@@ -246,7 +246,7 @@ Systems should be:
 - **Core Loop**: Control units, navigate grid, stop trains, steal cargo
 - **Visual Style**: Isometric 2.5D with era-specific art that dynamically changes
 
-See `GAME_DESIGN.md` for detailed game mechanics and design decisions.
+See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for detailed game mechanics and design decisions.
 
 ## Testing
 
@@ -278,10 +278,11 @@ make integration  # Run integration tests (55 SFML tests)
 ## Documentation
 
 - **`README.md`** - This file, setup and getting started guide
-- **`ROADMAP.md`** - Development roadmap, progress tracking, and next steps
-- **`CLAUDE.md`** - AI assistant guidance and architectural overview
-- **`DESIGN.md`** - High-level project design decisions
-- **`GAME_DESIGN.md`** - Game mechanics and design philosophy
+- **[docs/ROADMAP.md](docs/ROADMAP.md)** - Development roadmap, progress tracking, and next steps
+- **[docs/CLAUDE.md](docs/CLAUDE.md)** - AI assistant guidance and architectural overview
+- **[docs/DESIGN.md](docs/DESIGN.md)** - High-level project design decisions
+- **[docs/GAME_DESIGN.md](docs/GAME_DESIGN.md)** - Game mechanics and design philosophy
+- **[docs/WSL2_SETUP.md](docs/WSL2_SETUP.md)** - WSL2 setup guide for Windows development
 - **`engine/ecs/DESIGN.md`** - Detailed ECS technical documentation
 - **`engine/CLAUDE.md`** - Engine-specific AI guidance
 
