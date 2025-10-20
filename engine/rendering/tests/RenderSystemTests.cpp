@@ -364,12 +364,207 @@ TEST_F(RenderSystemTest, EdgeCases) {
 TEST_F(RenderSystemTest, NullRendererHandling) {
     // Create system with null renderer
     RenderSystem nullSystem(nullptr);
-    
+
     // Should handle null renderer gracefully (implementation choice)
     // Could throw exception or handle gracefully - depends on design decision
     EXPECT_NO_THROW(nullSystem.getRenderer());
-    
+
     // Update with null renderer should either throw or handle gracefully
     // For now, test that it doesn't crash the program
     EXPECT_NO_THROW(nullSystem.update(0.016f, *entityManager));
+}
+
+// ========================================================================
+// RED PHASE: Sprite Component Integration Tests
+// These tests verify RenderSystem uses actual component data from arrays
+// ========================================================================
+
+class RenderSystemSpriteComponentTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        mockRenderer = std::make_unique<MockRenderer>();
+        entityManager = std::make_unique<EntityManager>();
+
+        // Create component arrays
+        positions = std::make_unique<ComponentArray<Position>>();
+        sprites = std::make_unique<ComponentArray<Sprite>>();
+        renderables = std::make_unique<ComponentArray<Renderable>>();
+
+        // Create render system with component array dependency injection
+        renderSystem = std::make_unique<RenderSystem>(
+            mockRenderer.get(),
+            positions.get(),
+            sprites.get(),
+            renderables.get()
+        );
+
+        mockRenderer->reset();
+    }
+
+    void TearDown() override {
+        renderSystem.reset();
+        renderables.reset();
+        sprites.reset();
+        positions.reset();
+        entityManager.reset();
+        mockRenderer.reset();
+    }
+
+    std::unique_ptr<MockRenderer> mockRenderer;
+    std::unique_ptr<EntityManager> entityManager;
+    std::unique_ptr<ComponentArray<Position>> positions;
+    std::unique_ptr<ComponentArray<Sprite>> sprites;
+    std::unique_ptr<ComponentArray<Renderable>> renderables;
+    std::unique_ptr<RenderSystem> renderSystem;
+};
+
+// Test that RenderSystem uses actual Position component data
+TEST_F(RenderSystemSpriteComponentTest, UsesActualPositionData) {
+    // Create entity with specific position
+    Entity entity = entityManager->createEntity();
+
+    // Add Position component with specific values
+    uint64_t posBit = getComponentBit<Position>();
+    positions->add(entity.id, {123.5f, 456.7f, 2.0f}, posBit, *entityManager);
+
+    // Add Sprite component
+    uint64_t spriteBit = getComponentBit<Sprite>();
+    sprites->add(entity.id, {1, 64.0f, 48.0f}, spriteBit, *entityManager);
+
+    // Render the entity
+    renderSystem->update(0.016f, *entityManager);
+
+    // Verify renderer received the actual position data (NOT placeholder values)
+    ASSERT_EQ(mockRenderer->getSpriteCallCount(), 1);
+    const auto& spriteCall = mockRenderer->getSpriteCall(0);
+    EXPECT_FLOAT_EQ(spriteCall.x, 123.5f) << "Should use actual Position.x, not placeholder";
+    EXPECT_FLOAT_EQ(spriteCall.y, 456.7f) << "Should use actual Position.y, not placeholder";
+    EXPECT_FLOAT_EQ(spriteCall.z, 2.0f) << "Should use actual Position.z, not placeholder";
+}
+
+// Test that RenderSystem uses actual Sprite component data
+TEST_F(RenderSystemSpriteComponentTest, UsesActualSpriteData) {
+    // Create entity with specific sprite data
+    Entity entity = entityManager->createEntity();
+
+    // Add Position component
+    uint64_t posBit = getComponentBit<Position>();
+    positions->add(entity.id, {10.0f, 20.0f, 0.0f}, posBit, *entityManager);
+
+    // Add Sprite component with specific texture and dimensions
+    uint64_t spriteBit = getComponentBit<Sprite>();
+    sprites->add(entity.id, {99, 128.0f, 96.0f}, spriteBit, *entityManager);
+
+    // Render the entity
+    renderSystem->update(0.016f, *entityManager);
+
+    // Verify renderer received the actual sprite data (NOT placeholder values)
+    ASSERT_EQ(mockRenderer->getSpriteCallCount(), 1);
+    const auto& spriteCall = mockRenderer->getSpriteCall(0);
+    EXPECT_EQ(spriteCall.textureId, 99) << "Should use actual Sprite.textureId, not placeholder";
+    EXPECT_FLOAT_EQ(spriteCall.width, 128.0f) << "Should use actual Sprite.width, not placeholder";
+    EXPECT_FLOAT_EQ(spriteCall.height, 96.0f) << "Should use actual Sprite.height, not placeholder";
+}
+
+// Test rendering multiple sprites with different component data
+TEST_F(RenderSystemSpriteComponentTest, RendersMultipleSpritesWithUniqueData) {
+    // Create first entity with specific data
+    Entity entity1 = entityManager->createEntity();
+    uint64_t posBit = getComponentBit<Position>();
+    uint64_t spriteBit = getComponentBit<Sprite>();
+    positions->add(entity1.id, {50.0f, 100.0f, 0.0f}, posBit, *entityManager);
+    sprites->add(entity1.id, {10, 32.0f, 32.0f}, spriteBit, *entityManager);
+
+    // Create second entity with different data
+    Entity entity2 = entityManager->createEntity();
+    positions->add(entity2.id, {200.0f, 300.0f, 1.0f}, posBit, *entityManager);
+    sprites->add(entity2.id, {20, 64.0f, 64.0f}, spriteBit, *entityManager);
+
+    // Create third entity with yet different data
+    Entity entity3 = entityManager->createEntity();
+    positions->add(entity3.id, {400.0f, 500.0f, 2.0f}, posBit, *entityManager);
+    sprites->add(entity3.id, {30, 128.0f, 128.0f}, spriteBit, *entityManager);
+
+    // Render all entities
+    renderSystem->update(0.016f, *entityManager);
+
+    // Should have rendered 3 sprites
+    ASSERT_EQ(mockRenderer->getSpriteCallCount(), 3);
+
+    // Verify first sprite uses entity1's data
+    const auto& call1 = mockRenderer->getSpriteCall(0);
+    EXPECT_FLOAT_EQ(call1.x, 50.0f);
+    EXPECT_FLOAT_EQ(call1.y, 100.0f);
+    EXPECT_EQ(call1.textureId, 10);
+    EXPECT_FLOAT_EQ(call1.width, 32.0f);
+
+    // Verify second sprite uses entity2's data
+    const auto& call2 = mockRenderer->getSpriteCall(1);
+    EXPECT_FLOAT_EQ(call2.x, 200.0f);
+    EXPECT_FLOAT_EQ(call2.y, 300.0f);
+    EXPECT_EQ(call2.textureId, 20);
+    EXPECT_FLOAT_EQ(call2.width, 64.0f);
+
+    // Verify third sprite uses entity3's data
+    const auto& call3 = mockRenderer->getSpriteCall(2);
+    EXPECT_FLOAT_EQ(call3.x, 400.0f);
+    EXPECT_FLOAT_EQ(call3.y, 500.0f);
+    EXPECT_EQ(call3.textureId, 30);
+    EXPECT_FLOAT_EQ(call3.width, 128.0f);
+}
+
+// Test that entities without components are skipped
+TEST_F(RenderSystemSpriteComponentTest, SkipsEntitiesWithoutComponents) {
+    // Create entity with only Position (no Sprite)
+    Entity entity1 = entityManager->createEntity();
+    uint64_t posBit = getComponentBit<Position>();
+    positions->add(entity1.id, {10.0f, 20.0f, 0.0f}, posBit, *entityManager);
+
+    // Create entity with only Sprite (no Position)
+    Entity entity2 = entityManager->createEntity();
+    uint64_t spriteBit = getComponentBit<Sprite>();
+    sprites->add(entity2.id, {1, 32.0f, 32.0f}, spriteBit, *entityManager);
+
+    // Create entity with both Position and Sprite
+    Entity entity3 = entityManager->createEntity();
+    positions->add(entity3.id, {100.0f, 200.0f, 0.0f}, posBit, *entityManager);
+    sprites->add(entity3.id, {2, 64.0f, 64.0f}, spriteBit, *entityManager);
+
+    // Render - should only render entity3
+    renderSystem->update(0.016f, *entityManager);
+
+    // Should have rendered only the entity with both components
+    EXPECT_EQ(mockRenderer->getSpriteCallCount(), 1);
+    const auto& call = mockRenderer->getSpriteCall(0);
+    EXPECT_FLOAT_EQ(call.x, 100.0f);
+    EXPECT_EQ(call.textureId, 2);
+}
+
+// Test that Renderable components also use actual data
+TEST_F(RenderSystemSpriteComponentTest, UsesActualRenderableData) {
+    // Create entity with specific renderable data
+    Entity entity = entityManager->createEntity();
+
+    // Add Position component
+    uint64_t posBit = getComponentBit<Position>();
+    positions->add(entity.id, {75.5f, 125.5f, 1.5f}, posBit, *entityManager);
+
+    // Add Renderable component with specific color and dimensions
+    uint64_t renderableBit = getComponentBit<Renderable>();
+    renderables->add(entity.id, {80.0f, 60.0f, 0.8f, 0.6f, 0.4f, 0.9f}, renderableBit, *entityManager);
+
+    // Render the entity
+    renderSystem->update(0.016f, *entityManager);
+
+    // Verify renderer received the actual renderable data
+    ASSERT_EQ(mockRenderer->getRectCallCount(), 1);
+    const auto& rectCall = mockRenderer->getRectCall(0);
+    EXPECT_FLOAT_EQ(rectCall.x, 75.5f) << "Should use actual Position.x";
+    EXPECT_FLOAT_EQ(rectCall.y, 125.5f) << "Should use actual Position.y";
+    EXPECT_FLOAT_EQ(rectCall.width, 80.0f) << "Should use actual Renderable.width";
+    EXPECT_FLOAT_EQ(rectCall.height, 60.0f) << "Should use actual Renderable.height";
+    EXPECT_FLOAT_EQ(rectCall.r, 0.8f) << "Should use actual Renderable.red";
+    EXPECT_FLOAT_EQ(rectCall.g, 0.6f) << "Should use actual Renderable.green";
+    EXPECT_FLOAT_EQ(rectCall.b, 0.4f) << "Should use actual Renderable.blue";
+    EXPECT_FLOAT_EQ(rectCall.a, 0.9f) << "Should use actual Renderable.alpha";
 }

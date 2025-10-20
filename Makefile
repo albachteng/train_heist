@@ -86,7 +86,7 @@ TEST_PHYSICS_SRC := $(PHYSICS_SRC)
 TEST_PHYSICS_OBJ := $(patsubst $(PHYSICS_DIR)/%.cpp,$(BUILD_DIR)/physics/%.o,$(TEST_PHYSICS_SRC))
 
 # Integration tests - SFML-specific tests that need SFML libraries
-INTEGRATION_TEST_SRC := $(wildcard engine/rendering/tests/SFML*.cpp engine/input/tests/SFML*.cpp)
+INTEGRATION_TEST_SRC := $(wildcard engine/rendering/tests/SFML*.cpp engine/input/tests/SFML*.cpp engine/rendering/tests/SpriteIntegrationTests.cpp)
 INTEGRATION_TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(INTEGRATION_TEST_SRC))
 
 # Object files
