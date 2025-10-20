@@ -3,6 +3,9 @@
 #include "../../ecs/systems/include/ISystem.hpp"
 #include "IRenderer.hpp"
 #include "../../ecs/include/EntityManager.hpp"
+#include "../../ecs/include/ComponentArray.hpp"
+#include "../../ecs/components/include/Transform.hpp"
+#include "../../ecs/components/include/Rendering.hpp"
 
 namespace ECS {
 
@@ -29,13 +32,24 @@ namespace ECS {
 class RenderSystem : public ISystem {
 private:
     IRenderer* renderer;  // Injected rendering implementation
-    
+
+    // Component arrays for accessing entity component data
+    ComponentArray<Position>* positions;
+    ComponentArray<Sprite>* sprites;
+    ComponentArray<Renderable>* renderables;
+
 public:
     /**
      * Constructor with dependency injection
      * @param renderer Pointer to IRenderer implementation (MockRenderer, SFMLRenderer, etc.)
+     * @param positions Pointer to Position component array (optional, can be nullptr)
+     * @param sprites Pointer to Sprite component array (optional, can be nullptr)
+     * @param renderables Pointer to Renderable component array (optional, can be nullptr)
      */
-    explicit RenderSystem(IRenderer* renderer);
+    explicit RenderSystem(IRenderer* renderer,
+                         ComponentArray<Position>* positions = nullptr,
+                         ComponentArray<Sprite>* sprites = nullptr,
+                         ComponentArray<Renderable>* renderables = nullptr);
     
     /**
      * Update system - renders all entities with visual components

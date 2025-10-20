@@ -5,8 +5,15 @@
 
 namespace ECS {
 
-RenderSystem::RenderSystem(IRenderer* renderer) : renderer(renderer) {
-    // Store injected renderer for dependency injection
+RenderSystem::RenderSystem(IRenderer* renderer,
+                           ComponentArray<Position>* positions,
+                           ComponentArray<Sprite>* sprites,
+                           ComponentArray<Renderable>* renderables)
+    : renderer(renderer),
+      positions(positions),
+      sprites(sprites),
+      renderables(renderables) {
+    // Store injected dependencies for rendering
 }
 
 void RenderSystem::update(float deltaTime, EntityManager& entityManager) {
@@ -94,56 +101,58 @@ size_t RenderSystem::getLastRenderCount() const {
 
 void RenderSystem::renderSpriteEntity(const Entity& entity, EntityManager& entityManager) {
     (void)entityManager; // Suppress unused parameter warning
-    
-    // TODO: Access actual Position and Sprite component data
-    // For now, use placeholder values that vary by entity ID to make tests pass
-    
-    // Placeholder position (would come from Position component)
-    // Use specific values that match test expectations
-    float x = 100.0f;
-    float y = 200.0f; 
-    float z = static_cast<float>(entity.id % 3); // Cycle through 0.0f, 1.0f, 2.0f (id=1 gives 1.0f)
-    
-    // Placeholder sprite data (would come from Sprite component)
-    float width = 64.0f;
-    float height = 48.0f;
-    int textureId = 42;
-    
-    // Call renderer with placeholder values
-    renderer->renderSprite(x, y, z, width, height, textureId);
-    
-    // NOTE: In a full implementation, this would:
-    // 1. Get Position component data from ComponentArray<Position>
-    // 2. Get Sprite component data from ComponentArray<Sprite> 
-    // 3. Use actual entity.id to look up the component data
+
+    // Get Position component data
+    if (!positions) {
+        return; // Cannot render without position data
+    }
+
+    const Position* pos = positions->get(entity.id);
+    if (!pos) {
+        return; // Entity doesn't have position component
+    }
+
+    // Get Sprite component data
+    if (!sprites) {
+        return; // Cannot render without sprite data
+    }
+
+    const Sprite* sprite = sprites->get(entity.id);
+    if (!sprite) {
+        return; // Entity doesn't have sprite component
+    }
+
+    // Call renderer with actual component data
+    renderer->renderSprite(pos->x, pos->y, pos->z, sprite->width, sprite->height, sprite->textureId);
 }
 
 void RenderSystem::renderShapeEntity(const Entity& entity, EntityManager& entityManager) {
     (void)entityManager; // Suppress unused parameter warning
-    
-    // TODO: Access actual Position and Renderable component data
-    // For now, use placeholder values to make tests pass
-    
-    // Placeholder position (would come from Position component)
-    float x = 50.0f;
-    float y = 75.0f;
-    
-    // Placeholder renderable data (would come from Renderable component)
-    float width = 32.0f;
-    float height = 24.0f;
-    float red = 0.8f;
-    float green = 0.4f;
-    float blue = 0.2f;
-    float alpha = 0.9f;
-    
-    // Call renderer with placeholder values
-    renderer->renderRect(x, y, width, height, red, green, blue, alpha);
-    
-    // NOTE: In a full implementation, this would:
-    // 1. Get Position component data from ComponentArray<Position>
-    // 2. Get Renderable component data from ComponentArray<Renderable>
-    // 3. Use actual entity.id to look up the component data
-    (void)entity; // Entity would be used for component lookup
+
+    // Get Position component data
+    if (!positions) {
+        return; // Cannot render without position data
+    }
+
+    const Position* pos = positions->get(entity.id);
+    if (!pos) {
+        return; // Entity doesn't have position component
+    }
+
+    // Get Renderable component data
+    if (!renderables) {
+        return; // Cannot render without renderable data
+    }
+
+    const Renderable* renderable = renderables->get(entity.id);
+    if (!renderable) {
+        return; // Entity doesn't have renderable component
+    }
+
+    // Call renderer with actual component data
+    // Note: z-coordinate not used for rectangles currently
+    renderer->renderRect(pos->x, pos->y, renderable->width, renderable->height,
+                        renderable->red, renderable->green, renderable->blue, renderable->alpha);
 }
 
 } // namespace ECS

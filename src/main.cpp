@@ -51,10 +51,31 @@ int main() {
 
     // Create window
     LOG_INFO("Main", "Creating window...");
-    if (!windowManager->createWindow(800, 600, "Train Heist - Interactive Demo")) {
+    if (!windowManager->createWindow(800, 600, "Train Heist - Sprite Demo")) {
       LOG_ERROR("Main", "Failed to create window!");
       return -1;
     }
+
+    // Load sprite textures
+    LOG_INFO("Main", "Loading sprite textures...");
+    TextureHandle enemyTexture = resourceManager->loadTexture("assets/sprites/enemy_sprite.gif");
+    TextureHandle trainTexture = resourceManager->loadTexture("assets/sprites/train_sprite.png");
+    TextureHandle landscapeTexture = resourceManager->loadTexture("assets/sprites/landscape_tiles.png");
+
+    if (enemyTexture == INVALID_TEXTURE) {
+      LOG_ERROR("Main", "Failed to load enemy sprite!");
+      return -1;
+    }
+    if (trainTexture == INVALID_TEXTURE) {
+      LOG_ERROR("Main", "Failed to load train sprite!");
+      return -1;
+    }
+    if (landscapeTexture == INVALID_TEXTURE) {
+      LOG_ERROR("Main", "Failed to load landscape tiles!");
+      return -1;
+    }
+
+    LOG_INFO("Main", "All sprites loaded successfully!");
 
     // Create ECS systems
     EntityManager entityManager;
@@ -62,6 +83,7 @@ int main() {
 
     // Create component arrays
     ComponentArray<Position> positionComponents;
+    ComponentArray<Sprite> spriteComponents;
     ComponentArray<Renderable> renderableComponents;
     ComponentArray<GridPosition> gridPositionComponents;
     ComponentArray<GridMovement> gridMovementComponents;
@@ -83,11 +105,19 @@ int main() {
     const float CELL_SIZE = 64.0f;
     movementSystem->setGridCellSize(CELL_SIZE);
 
-    LOG_INFO("ECS", "Setting up grid-based movement demo...");
+    // Create RenderSystem with component array pointers
+    auto renderSystem = std::make_unique<RenderSystem>(
+        renderer.get(),
+        &positionComponents,
+        &spriteComponents,
+        &renderableComponents
+    );
+
+    LOG_INFO("ECS", "Setting up sprite-based grid demo...");
 
     // Get component bits
     uint64_t positionBit = getComponentBit<Position>();
-    uint64_t renderableBit = getComponentBit<Renderable>();
+    uint64_t spriteBit = getComponentBit<Sprite>();
     uint64_t gridPositionBit = getComponentBit<GridPosition>();
     uint64_t gridMovementBit = getComponentBit<GridMovement>();
     uint64_t gridBoundsBit = getComponentBit<GridBounds>();
@@ -96,102 +126,102 @@ int main() {
     const int GRID_WIDTH = 10;      // 10 cells wide (640 pixels)
     const int GRID_HEIGHT = 8;      // 8 cells tall (512 pixels)
 
-    // Create some demo entities with rectangles (no texture files needed)
+    // Create demo entities with sprite textures
 
-    // Red rectangle in top-left - CONTROLLABLE with arrow keys on GRID
-    Entity redRect = entityManager.createEntity();
+    // Player entity - CONTROLLABLE with arrow keys on GRID (using enemy sprite)
+    Entity playerEntity = entityManager.createEntity();
 
     // Start at grid position (1, 1)
     GridPosition startGridPos = {1, 1};
-    positionComponents.add(redRect.id,
+    positionComponents.add(playerEntity.id,
                           {startGridPos.x * CELL_SIZE, startGridPos.y * CELL_SIZE, 0.0f},
                           positionBit, entityManager);
-    renderableComponents.add(redRect.id,
-                             {CELL_SIZE, CELL_SIZE, 1.0f, 0.0f, 0.0f, 1.0f},  // Red, cell-sized
-                             renderableBit, entityManager);
-    gridPositionComponents.add(redRect.id, startGridPos, gridPositionBit, entityManager);
-    gridMovementComponents.add(redRect.id, GridMovement(), gridMovementBit, entityManager);
-    gridBoundsComponents.add(redRect.id,
+    spriteComponents.add(playerEntity.id,
+                        {enemyTexture, CELL_SIZE, CELL_SIZE},
+                        spriteBit, entityManager);
+    gridPositionComponents.add(playerEntity.id, startGridPos, gridPositionBit, entityManager);
+    gridMovementComponents.add(playerEntity.id, GridMovement(), gridMovementBit, entityManager);
+    gridBoundsComponents.add(playerEntity.id,
                             GridBounds(0, 0, GRID_WIDTH - 1, GRID_HEIGHT - 1),
                             gridBoundsBit, entityManager);
 
-    // Set red rectangle as the controllable entity
-    inputSystem->setControlledEntity(redRect.id);
-    LOG_INFO("Demo", "Red square: Use ARROW KEYS to move on grid (cell size: " +
+    // Set player entity as the controllable entity
+    inputSystem->setControlledEntity(playerEntity.id);
+    LOG_INFO("Demo", "Player entity: Use ARROW KEYS to move on grid (cell size: " +
              std::to_string((int)CELL_SIZE) + "px)");
 
-    // Green square at top-right corner of grid (9, 0)
-    Entity greenRect = entityManager.createEntity();
-    GridPosition greenGridPos = {9, 0};
-    positionComponents.add(greenRect.id,
-                          {greenGridPos.x * CELL_SIZE, greenGridPos.y * CELL_SIZE, 0.0f},
+    // Landscape entity at top-right corner of grid (9, 0)
+    Entity landscapeEntity1 = entityManager.createEntity();
+    GridPosition landscapePos1 = {9, 0};
+    positionComponents.add(landscapeEntity1.id,
+                          {landscapePos1.x * CELL_SIZE, landscapePos1.y * CELL_SIZE, 0.0f},
                           positionBit, entityManager);
-    renderableComponents.add(greenRect.id,
-                             {CELL_SIZE, CELL_SIZE, 0.0f, 1.0f, 0.0f, 1.0f},  // Green, cell-sized
-                             renderableBit, entityManager);
-    gridPositionComponents.add(greenRect.id, greenGridPos, gridPositionBit, entityManager);
+    spriteComponents.add(landscapeEntity1.id,
+                        {landscapeTexture, CELL_SIZE, CELL_SIZE},
+                        spriteBit, entityManager);
+    gridPositionComponents.add(landscapeEntity1.id, landscapePos1, gridPositionBit, entityManager);
 
-    // Blue square at bottom-left (0, 7)
-    Entity blueRect = entityManager.createEntity();
-    GridPosition blueGridPos = {0, 7};
-    positionComponents.add(blueRect.id,
-                          {blueGridPos.x * CELL_SIZE, blueGridPos.y * CELL_SIZE, 0.0f},
+    // Landscape entity at bottom-left (0, 7)
+    Entity landscapeEntity2 = entityManager.createEntity();
+    GridPosition landscapePos2 = {0, 7};
+    positionComponents.add(landscapeEntity2.id,
+                          {landscapePos2.x * CELL_SIZE, landscapePos2.y * CELL_SIZE, 0.0f},
                           positionBit, entityManager);
-    renderableComponents.add(blueRect.id,
-                             {CELL_SIZE, CELL_SIZE, 0.0f, 0.0f, 1.0f, 1.0f},  // Blue, cell-sized
-                             renderableBit, entityManager);
-    gridPositionComponents.add(blueRect.id, blueGridPos, gridPositionBit, entityManager);
+    spriteComponents.add(landscapeEntity2.id,
+                        {landscapeTexture, CELL_SIZE, CELL_SIZE},
+                        spriteBit, entityManager);
+    gridPositionComponents.add(landscapeEntity2.id, landscapePos2, gridPositionBit, entityManager);
 
-    // Yellow square - AUTOMATIC MOVEMENT (moves in rectangular pattern)
-    Entity yellowRect = entityManager.createEntity();
-    GridPosition yellowGridPos = {4, 3};  // Start at top-left of pattern
-    positionComponents.add(yellowRect.id,
-                          {yellowGridPos.x * CELL_SIZE, yellowGridPos.y * CELL_SIZE, 0.0f},
+    // Train entity - AUTOMATIC MOVEMENT (moves in rectangular pattern)
+    Entity trainEntity = entityManager.createEntity();
+    GridPosition trainGridPos = {4, 3};  // Start at top-left of pattern
+    positionComponents.add(trainEntity.id,
+                          {trainGridPos.x * CELL_SIZE, trainGridPos.y * CELL_SIZE, 0.0f},
                           positionBit, entityManager);
-    renderableComponents.add(yellowRect.id,
-                             {CELL_SIZE, CELL_SIZE, 1.0f, 1.0f, 0.0f, 1.0f},  // Yellow, cell-sized
-                             renderableBit, entityManager);
-    gridPositionComponents.add(yellowRect.id, yellowGridPos, gridPositionBit, entityManager);
-    gridMovementComponents.add(yellowRect.id, GridMovement(), gridMovementBit, entityManager);
-    gridBoundsComponents.add(yellowRect.id,
+    spriteComponents.add(trainEntity.id,
+                        {trainTexture, CELL_SIZE, CELL_SIZE},
+                        spriteBit, entityManager);
+    gridPositionComponents.add(trainEntity.id, trainGridPos, gridPositionBit, entityManager);
+    gridMovementComponents.add(trainEntity.id, GridMovement(), gridMovementBit, entityManager);
+    gridBoundsComponents.add(trainEntity.id,
                             GridBounds(0, 0, GRID_WIDTH - 1, GRID_HEIGHT - 1),
                             gridBoundsBit, entityManager);
 
-    // Purple square in center (5, 4)
-    Entity purpleRect = entityManager.createEntity();
-    GridPosition purpleGridPos = {5, 4};
-    positionComponents.add(purpleRect.id,
-                          {purpleGridPos.x * CELL_SIZE, purpleGridPos.y * CELL_SIZE, 0.0f},
+    // Landscape entity in center (5, 4)
+    Entity landscapeEntity3 = entityManager.createEntity();
+    GridPosition landscapePos3 = {5, 4};
+    positionComponents.add(landscapeEntity3.id,
+                          {landscapePos3.x * CELL_SIZE, landscapePos3.y * CELL_SIZE, 0.0f},
                           positionBit, entityManager);
-    renderableComponents.add(purpleRect.id,
-                             {CELL_SIZE, CELL_SIZE, 0.5f, 0.0f, 0.5f, 1.0f},  // Purple, cell-sized
-                             renderableBit, entityManager);
-    gridPositionComponents.add(purpleRect.id, purpleGridPos, gridPositionBit, entityManager);
+    spriteComponents.add(landscapeEntity3.id,
+                        {landscapeTexture, CELL_SIZE, CELL_SIZE},
+                        spriteBit, entityManager);
+    gridPositionComponents.add(landscapeEntity3.id, landscapePos3, gridPositionBit, entityManager);
 
     LOG_INFO("ECS", "Created " +
                         std::to_string(entityManager.getActiveEntityCount()) +
                         " demo entities");
-    LOG_INFO("Main", "=== GRID-BASED MOVEMENT DEMO ===");
+    LOG_INFO("Main", "=== SPRITE-BASED GRID MOVEMENT DEMO ===");
     LOG_INFO("Main", "Grid Configuration:");
     LOG_INFO("Main", "  - Size: " + std::to_string(GRID_WIDTH) + "x" +
              std::to_string(GRID_HEIGHT) + " cells (" +
              std::to_string((int)CELL_SIZE) + "px each)");
     LOG_INFO("Main", "  - Total area: " + std::to_string(GRID_WIDTH * (int)CELL_SIZE) + "x" +
              std::to_string(GRID_HEIGHT * (int)CELL_SIZE) + " pixels");
-    LOG_INFO("Main", "Entity Positions:");
-    LOG_INFO("Main", "  - RED (controllable): grid (1, 1)");
-    LOG_INFO("Main", "  - GREEN: grid (9, 0) - top-right corner");
-    LOG_INFO("Main", "  - BLUE: grid (0, 7) - bottom-left corner");
-    LOG_INFO("Main", "  - YELLOW (automatic): grid (4, 3) - moves in rectangular pattern");
-    LOG_INFO("Main", "  - PURPLE: grid (5, 4) - center");
+    LOG_INFO("Main", "Entity Sprites:");
+    LOG_INFO("Main", "  - PLAYER (enemy sprite, controllable): grid (1, 1)");
+    LOG_INFO("Main", "  - LANDSCAPE 1: grid (9, 0) - top-right corner");
+    LOG_INFO("Main", "  - LANDSCAPE 2: grid (0, 7) - bottom-left corner");
+    LOG_INFO("Main", "  - TRAIN (automatic): grid (4, 3) - moves in rectangular pattern");
+    LOG_INFO("Main", "  - LANDSCAPE 3: grid (5, 4) - center");
     LOG_INFO("Main", "Controls:");
-    LOG_INFO("Main", "  - Use ARROW KEYS to move red square on grid");
-    LOG_INFO("Main", "  - Yellow square moves automatically to demonstrate grid system");
+    LOG_INFO("Main", "  - Use ARROW KEYS to move player entity on grid");
+    LOG_INFO("Main", "  - Train moves automatically to demonstrate grid system");
     LOG_INFO("Main", "  - Movement uses smooth interpolation between cells");
     LOG_INFO("Main", "  - Press ESCAPE or close window to exit");
-    LOG_INFO("Main", "Starting grid-based movement demo...");
+    LOG_INFO("Main", "Starting sprite-based grid demo...");
 
-    // Automatic movement pattern for yellow square (rectangular loop)
+    // Automatic movement pattern for train entity (rectangular loop)
     const GridPosition autoMovementPattern[] = {
         {4, 3},  // Top-left
         {6, 3},  // Top-right
@@ -259,24 +289,24 @@ int main() {
         }
       }
 
-      // Automatic movement for yellow square (demonstrates grid system with multiple entities)
-      GridPosition* yellowGridPos = gridPositionComponents.get(yellowRect.id);
-      GridMovement* yellowGridMove = gridMovementComponents.get(yellowRect.id);
-      GridBounds* yellowBounds = gridBoundsComponents.get(yellowRect.id);
+      // Automatic movement for train entity (demonstrates grid system with multiple entities)
+      GridPosition* trainGridPos = gridPositionComponents.get(trainEntity.id);
+      GridMovement* trainGridMove = gridMovementComponents.get(trainEntity.id);
+      GridBounds* trainBounds = gridBoundsComponents.get(trainEntity.id);
 
-      if (yellowGridPos && yellowGridMove && yellowBounds) {
-        // If yellow square finished moving, queue next position in pattern
-        if (!yellowGridMove->isMoving) {
+      if (trainGridPos && trainGridMove && trainBounds) {
+        // If train finished moving, queue next position in pattern
+        if (!trainGridMove->isMoving) {
           // Move to next position in pattern
           currentPatternIndex = (currentPatternIndex + 1) % patternSize;
           const GridPosition& nextPos = autoMovementPattern[currentPatternIndex];
 
-          if (yellowBounds->isValid(nextPos.x, nextPos.y)) {
-            yellowGridMove->targetX = nextPos.x;
-            yellowGridMove->targetY = nextPos.y;
-            yellowGridMove->progress = 0.0f;
-            yellowGridMove->isMoving = true;
-            LOG_INFO("AutoMovement", "Yellow square moving to grid cell (" +
+          if (trainBounds->isValid(nextPos.x, nextPos.y)) {
+            trainGridMove->targetX = nextPos.x;
+            trainGridMove->targetY = nextPos.y;
+            trainGridMove->progress = 0.0f;
+            trainGridMove->isMoving = true;
+            LOG_INFO("AutoMovement", "Train moving to grid cell (" +
                      std::to_string(nextPos.x) + ", " + std::to_string(nextPos.y) + ")");
           }
         }
@@ -285,31 +315,8 @@ int main() {
       // Update MovementSystem (handles smooth interpolation)
       movementSystem->update(entityManager, 0.016f);  // ~60 FPS (16ms)
 
-      // Begin rendering frame
-      renderer->beginFrame();
-      renderer->clear();
-
-      // Manual rendering loop (simplified for demo)
-      const auto &positions = positionComponents.getComponents();
-      const auto &posEntityIDs = positionComponents.getEntityIDs();
-
-      // Render entities that have both Position and Renderable components
-      for (size_t i = 0; i < positions.size(); ++i) {
-        EntityID entityId = posEntityIDs[i];
-
-        // Check if this entity also has a Renderable component
-        const Renderable *renderable = renderableComponents.get(entityId);
-        if (renderable) {
-          const Position &pos = positions[i];
-          renderer->renderRect(pos.x, pos.y, renderable->width,
-                               renderable->height, renderable->red,
-                               renderable->green, renderable->blue,
-                               renderable->alpha);
-        }
-      }
-
-      // End rendering frame
-      renderer->endFrame();
+      // Render all entities with sprites using RenderSystem
+      renderSystem->update(0.016f, entityManager);
 
       // Print frame info occasionally
       frameCount++;

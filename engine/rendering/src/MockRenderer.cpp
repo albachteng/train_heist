@@ -58,14 +58,30 @@ bool MockRenderer::verifyCallSequence(const std::vector<std::string>& expectedSe
     if (methodCalls.size() != expectedSequence.size()) {
         return false;
     }
-    
+
     for (size_t i = 0; i < methodCalls.size(); ++i) {
         if (methodCalls[i] != expectedSequence[i]) {
             return false;
         }
     }
-    
+
     return true;
+}
+
+size_t MockRenderer::getSpriteCallCount() const {
+    return spriteCalls.size();
+}
+
+const MockRenderer::SpriteCall& MockRenderer::getSpriteCall(size_t index) const {
+    return spriteCalls.at(index);
+}
+
+size_t MockRenderer::getRectCallCount() const {
+    return rectCalls.size();
+}
+
+const MockRenderer::RectCall& MockRenderer::getRectCall(size_t index) const {
+    return rectCalls.at(index);
 }
 
 } // namespace ECS
