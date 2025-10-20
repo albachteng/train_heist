@@ -67,31 +67,42 @@ void SFMLRenderer::clear() {
 void SFMLRenderer::renderSprite(float x, float y, float z, float width, float height, int textureHandle) {
     // Increment sprite count
     currentFrameSpriteCount++;
-    
-    // Skip rendering if no render target
-    if (!currentRenderTarget) {
+
+    // Get window directly from window manager for actual rendering (like renderRect does)
+    if (!windowManager) {
         return;
     }
-    
+
+    void* nativeTarget = windowManager->getNativeRenderTarget();
+    if (!nativeTarget) {
+        return;
+    }
+
+    // Cast to RenderWindow and validate it's open (like renderRect does)
+    sf::RenderWindow* window = static_cast<sf::RenderWindow*>(nativeTarget);
+    if (!window || !window->isOpen()) {
+        return;
+    }
+
     // Get texture from resource manager
     const sf::Texture* texture = getTexture(textureHandle);
     if (!texture) {
         return; // Still count render attempt but skip actual rendering
     }
-    
+
     // Create and configure sprite for real SFML rendering
     sf::Sprite sprite(*texture);
     sprite.setPosition(sf::Vector2f(x, y));
-    
+
     // Set sprite scale to achieve desired width/height
     sf::Vector2u textureSize = texture->getSize();
     if (textureSize.x > 0 && textureSize.y > 0) {
         sprite.setScale(sf::Vector2f(width / textureSize.x, height / textureSize.y));
     }
-    
+
     // Render sprite (z-coordinate ignored for now, could be used for depth sorting later)
     (void)z;
-    currentRenderTarget->draw(sprite);
+    window->draw(sprite);
 }
 
 void SFMLRenderer::renderRect(float x, float y, float width, float height, float r, float g, float b, float a) {

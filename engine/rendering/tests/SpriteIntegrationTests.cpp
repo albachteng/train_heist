@@ -9,6 +9,7 @@
 #include "../../ecs/include/ComponentArray.hpp"
 #include <gtest/gtest.h>
 #include <memory>
+#include <cstdlib>
 
 using namespace ECS;
 
@@ -34,7 +35,15 @@ protected:
         resourceManager = std::make_unique<SFMLResourceManager>();
 
         // Create window for rendering context
-        windowManager->createWindow(800, 600, "Sprite Integration Test");
+        if (!windowManager->createWindow(800, 600, "Sprite Integration Test")) {
+            GTEST_SKIP() << "Cannot create window - skipping sprite integration tests";
+        }
+
+        // Flush any initial X events
+        WindowEvent event;
+        while (windowManager->pollEvent(event)) {
+            // Drain event queue
+        }
 
         // Create renderer with real SFML backend
         renderer = std::make_unique<SFMLRenderer>(resourceManager.get(), windowManager.get());
@@ -62,7 +71,9 @@ protected:
         entityManager.reset();
         renderer.reset();
         resourceManager.reset();
-        windowManager->closeWindow();
+        if (windowManager && windowManager->isWindowOpen()) {
+            windowManager->closeWindow();
+        }
         windowManager.reset();
     }
 
@@ -76,8 +87,173 @@ protected:
     std::unique_ptr<RenderSystem> renderSystem;
 };
 
-// Test loading train sprite and rendering it
-TEST_F(SpriteIntegrationTest, LoadAndRenderTrainSprite) {
+// Test loading train sprite and rendering it - MINIMAL TEST
+TEST(SpriteIntegrationMinimalTest, JustCreateWindow) {
+    auto windowManager = std::make_unique<SFMLWindowManager>();
+    bool created = windowManager->createWindow(800, 600, "Minimal Test");
+    EXPECT_TRUE(created);
+    EXPECT_TRUE(windowManager->isWindowOpen());
+    windowManager->closeWindow();
+}
+
+TEST(SpriteIntegrationMinimalTest, WindowPlusRenderer) {
+    auto windowManager = std::make_unique<SFMLWindowManager>();
+    auto resourceManager = std::make_unique<SFMLResourceManager>();
+
+    bool created = windowManager->createWindow(800, 600, "Renderer Test");
+    EXPECT_TRUE(created);
+
+    // Create renderer - does this cause the issue?
+    auto renderer = std::make_unique<SFMLRenderer>(resourceManager.get(), windowManager.get());
+
+    EXPECT_TRUE(windowManager->isWindowOpen());
+    windowManager->closeWindow();
+}
+
+TEST(SpriteIntegrationMinimalTest, FullFixtureInline) {
+    auto windowManager = std::make_unique<SFMLWindowManager>();
+    auto resourceManager = std::make_unique<SFMLResourceManager>();
+
+    bool created = windowManager->createWindow(800, 600, "Full Fixture Test");
+    EXPECT_TRUE(created);
+
+    auto renderer = std::make_unique<SFMLRenderer>(resourceManager.get(), windowManager.get());
+
+    // Add ECS components like the fixture does
+    auto entityManager = std::make_unique<EntityManager>();
+    auto positions = std::make_unique<ComponentArray<Position>>();
+    auto sprites = std::make_unique<ComponentArray<Sprite>>();
+    auto renderables = std::make_unique<ComponentArray<Renderable>>();
+
+    // Create render system - does THIS cause the issue?
+    auto renderSystem = std::make_unique<RenderSystem>(
+        renderer.get(),
+        positions.get(),
+        sprites.get(),
+        renderables.get()
+    );
+
+    EXPECT_TRUE(windowManager->isWindowOpen());
+    windowManager->closeWindow();
+}
+
+TEST(SpriteIntegrationMinimalTest, LoadTextureAfterWindow) {
+    auto windowManager = std::make_unique<SFMLWindowManager>();
+    auto resourceManager = std::make_unique<SFMLResourceManager>();
+
+    bool created = windowManager->createWindow(800, 600, "Texture Load Test");
+    EXPECT_TRUE(created);
+
+    // Try loading a texture - does THIS cause the crash?
+    TextureHandle trainTexture = resourceManager->loadTexture("assets/sprites/train_sprite.png");
+    EXPECT_NE(trainTexture, INVALID_TEXTURE);
+
+    windowManager->closeWindow();
+}
+
+TEST(SpriteIntegrationMinimalTest, RenderEmptyScene) {
+    auto windowManager = std::make_unique<SFMLWindowManager>();
+    auto resourceManager = std::make_unique<SFMLResourceManager>();
+
+    ASSERT_TRUE(windowManager->createWindow(800, 600, "Render Test"));
+
+    auto renderer = std::make_unique<SFMLRenderer>(resourceManager.get(), windowManager.get());
+    auto entityManager = std::make_unique<EntityManager>();
+    auto positions = std::make_unique<ComponentArray<Position>>();
+    auto sprites = std::make_unique<ComponentArray<Sprite>>();
+    auto renderables = std::make_unique<ComponentArray<Renderable>>();
+    auto renderSystem = std::make_unique<RenderSystem>(
+        renderer.get(), positions.get(), sprites.get(), renderables.get()
+    );
+
+    // Try rendering an empty scene - does THIS cause the crash?
+    EXPECT_NO_THROW(renderSystem->update(0.016f, *entityManager));
+
+    windowManager->closeWindow();
+}
+
+TEST(SpriteIntegrationMinimalTest, RenderSpriteEntity) {
+    auto windowManager = std::make_unique<SFMLWindowManager>();
+    auto resourceManager = std::make_unique<SFMLResourceManager>();
+
+    ASSERT_TRUE(windowManager->createWindow(800, 600, "Sprite Render Test"));
+
+    // Load texture first
+    TextureHandle trainTexture = resourceManager->loadTexture("assets/sprites/train_sprite.png");
+    ASSERT_NE(trainTexture, INVALID_TEXTURE);
+
+    auto renderer = std::make_unique<SFMLRenderer>(resourceManager.get(), windowManager.get());
+    auto entityManager = std::make_unique<EntityManager>();
+    auto positions = std::make_unique<ComponentArray<Position>>();
+    auto sprites = std::make_unique<ComponentArray<Sprite>>();
+    auto renderables = std::make_unique<ComponentArray<Renderable>>();
+    auto renderSystem = std::make_unique<RenderSystem>(
+        renderer.get(), positions.get(), sprites.get(), renderables.get()
+    );
+
+    // Create entity with sprite
+    Entity trainEntity = entityManager->createEntity();
+    uint64_t posBit = getComponentBit<Position>();
+    uint64_t spriteBit = getComponentBit<Sprite>();
+
+    positions->add(trainEntity.id, {100.0f, 200.0f, 0.0f}, posBit, *entityManager);
+    sprites->add(trainEntity.id, {trainTexture, 128.0f, 64.0f}, spriteBit, *entityManager);
+
+    // Call beginFrame before rendering - we were missing this!
+    renderer->beginFrame();
+
+    // Render the sprite
+    EXPECT_NO_THROW(renderSystem->update(0.016f, *entityManager));
+    EXPECT_EQ(renderer->getSpriteRenderCount(), 1);
+
+    renderer->endFrame();
+    windowManager->closeWindow();
+}
+
+// Test loading train sprite and rendering it - NO FIXTURE
+TEST(SpriteIntegrationStandaloneTest, LoadAndRenderTrainSprite) {
+    // Create everything inline like the working minimal test
+    auto windowManager = std::make_unique<SFMLWindowManager>();
+    auto resourceManager = std::make_unique<SFMLResourceManager>();
+
+    ASSERT_TRUE(windowManager->createWindow(800, 600, "Sprite Test"));
+
+    auto renderer = std::make_unique<SFMLRenderer>(resourceManager.get(), windowManager.get());
+    auto entityManager = std::make_unique<EntityManager>();
+    auto positions = std::make_unique<ComponentArray<Position>>();
+    auto sprites = std::make_unique<ComponentArray<Sprite>>();
+    auto renderables = std::make_unique<ComponentArray<Renderable>>();
+    auto renderSystem = std::make_unique<RenderSystem>(
+        renderer.get(), positions.get(), sprites.get(), renderables.get()
+    );
+
+    // Load train sprite from assets
+    TextureHandle trainTexture = resourceManager->loadTexture("assets/sprites/train_sprite.png");
+    ASSERT_NE(trainTexture, INVALID_TEXTURE) << "Failed to load train sprite";
+    EXPECT_TRUE(resourceManager->isTextureValid(trainTexture));
+
+    // Create entity with train sprite
+    Entity trainEntity = entityManager->createEntity();
+    uint64_t posBit = getComponentBit<Position>();
+    uint64_t spriteBit = getComponentBit<Sprite>();
+
+    // Position train at (100, 200)
+    positions->add(trainEntity.id, {100.0f, 200.0f, 0.0f}, posBit, *entityManager);
+
+    // Add sprite component with loaded texture
+    sprites->add(trainEntity.id, {trainTexture, 128.0f, 64.0f}, spriteBit, *entityManager);
+
+    // Render the train sprite
+    EXPECT_NO_THROW(renderSystem->update(0.016f, *entityManager));
+
+    // Verify sprite was rendered
+    EXPECT_EQ(renderer->getSpriteRenderCount(), 1);
+
+    windowManager->closeWindow();
+}
+
+// FIXTURE VERSION - KEEP FOR COMPARISON
+TEST_F(SpriteIntegrationTest, LoadAndRenderTrainSprite_FixtureVersion) {
     // Load train sprite from assets
     TextureHandle trainTexture = resourceManager->loadTexture("assets/sprites/train_sprite.png");
     ASSERT_NE(trainTexture, INVALID_TEXTURE) << "Failed to load train sprite";
