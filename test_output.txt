@@ -1,3 +1,0 @@
-./build/linux/ecs_tests
-make: ./build/linux/ecs_tests: Permission denied
-make: *** [Makefile:145: test] Error 127

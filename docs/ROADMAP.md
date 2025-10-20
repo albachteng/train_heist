@@ -82,17 +82,24 @@ We're using a **two-track approach** that delivers value quickly while building 
   - Entity filtering for Position + (Sprite OR Renderable) components
   - Complete SFML integration with event conversion layer
   - Two-tier testing system (unit + integration tests)
-- [ ] **Physics Components** *(in progress)*
-  - `GridMovement { int targetX, targetY; float progress; }` for discrete grid-based movement  
+- [x] **Physics Components** ✅ **COMPLETED**
+  - `GridMovement { int targetX, targetY; float progress; }` for discrete grid-based movement
   - `Velocity { float dx, dy; }` for smooth visual transitions between grid cells
   - `Acceleration { float dx, dy; }` for physics-based motion effects
   - Grid validation and collision detection components
+- [x] **Grid-Based Movement Demo** ✅ **COMPLETED**
+  - Main.cpp demonstrates grid-based movement with 10x8 grid (64px cells)
+  - Arrow keys control entity on discrete grid cells
+  - Smooth visual interpolation between cells
+  - MovementSystem integrated with full physics pipeline
 
 **Success Criteria Phase 1:**
 - ✅ Window opens and displays content ✅ **ACHIEVED**
-- ✅ Keyboard input moves a visual element ✅ **ACHIEVED** 
+- ✅ Keyboard input moves a visual element ✅ **ACHIEVED**
 - ✅ SystemManager orchestrates updates properly ✅ **ACHIEVED**
-- [ ] Grid-based movement with smooth visual transitions *(next milestone)*
+- ✅ Grid-based movement with smooth visual transitions ✅ **ACHIEVED**
+
+**🎉 PHASE 1 COMPLETE! All success criteria met.**
 
 ### **Phase 2: Game Foundations** (Target: Week 2)
 **Goal**: Grid-based movement with multiple entities
@@ -163,6 +170,38 @@ We're using a **two-track approach** that delivers value quickly while building 
 - ✅ OpenGL effects enhance visual appeal (shaders, particles)
 - ✅ True 2.5D isometric view with proper depth sorting
 - ✅ Smooth camera system for isometric gameplay
+
+### **Phase 5: Engine Library Export** (Target: Future)
+**Goal**: Package the engine as a reusable library for other projects
+
+#### Deliverables
+- [ ] **Library Packaging**
+  - CMake build system for library compilation
+  - Separate engine library from game executable
+  - Header-only option for template-heavy components
+  - Shared/static library build options
+- [ ] **Public API Definition**
+  - Clean public headers in `engine/include/`
+  - Hide implementation details (PIMPL pattern where appropriate)
+  - Versioned API with semantic versioning
+  - API documentation generation (Doxygen)
+- [ ] **Example Projects**
+  - Minimal "Hello World" ECS project
+  - Grid-based movement demo (extracted from current main.cpp)
+  - Complete game template with all systems
+- [ ] **Distribution**
+  - Package manager support (vcpkg, conan)
+  - Installation scripts for multiple platforms
+  - Pre-built binaries for common platforms
+  - Comprehensive usage documentation
+
+**Success Criteria Phase 5:**
+- ✅ Engine compiles as standalone library
+- ✅ Example projects build against installed library
+- ✅ Other projects can use engine without modifying engine source
+- ✅ Clear upgrade path for library updates
+
+**Note**: This phase will be tackled after core game functionality is complete, ensuring the API is stable and battle-tested.
 
 ## 🏗️ Architecture Decisions
 
@@ -281,9 +320,9 @@ This roadmap will be updated as development progresses:
 
 ## 📚 References
 
-- **Architecture Documentation**: See `engine/ecs/DESIGN.md` for detailed ECS design
-- **Development Guidelines**: See `engine/CLAUDE.md` for coding standards and workflow
-- **Project Overview**: See `README.md` for project introduction and build instructions
+- **Architecture Documentation**: See `../engine/ecs/DESIGN.md` for detailed ECS design
+- **Development Guidelines**: See `../engine/CLAUDE.md` for coding standards and workflow
+- **Project Overview**: See `../README.md` for project introduction and build instructions
 
 ---
 
