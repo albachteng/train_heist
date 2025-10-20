@@ -563,8 +563,8 @@ TEST_F(RenderSystemSpriteComponentTest, UsesActualRenderableData) {
     EXPECT_FLOAT_EQ(rectCall.y, 125.5f) << "Should use actual Position.y";
     EXPECT_FLOAT_EQ(rectCall.width, 80.0f) << "Should use actual Renderable.width";
     EXPECT_FLOAT_EQ(rectCall.height, 60.0f) << "Should use actual Renderable.height";
-    EXPECT_FLOAT_EQ(rectCall.r, 0.8f) << "Should use actual Renderable.red";
-    EXPECT_FLOAT_EQ(rectCall.g, 0.6f) << "Should use actual Renderable.green";
-    EXPECT_FLOAT_EQ(rectCall.b, 0.4f) << "Should use actual Renderable.blue";
-    EXPECT_FLOAT_EQ(rectCall.a, 0.9f) << "Should use actual Renderable.alpha";
+    EXPECT_FLOAT_EQ(rectCall.red, 0.8f) << "Should use actual Renderable.red";
+    EXPECT_FLOAT_EQ(rectCall.green, 0.6f) << "Should use actual Renderable.green";
+    EXPECT_FLOAT_EQ(rectCall.blue, 0.4f) << "Should use actual Renderable.blue";
+    EXPECT_FLOAT_EQ(rectCall.alpha, 0.9f) << "Should use actual Renderable.alpha";
 }

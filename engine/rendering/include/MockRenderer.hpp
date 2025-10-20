@@ -49,10 +49,16 @@ public:
     size_t getCallCount(const std::string& methodName) const;
     bool wasMethodCalled(const std::string& methodName) const;
     void setScreenSize(int width, int height);
-    
+
     // Call order verification methods
     std::vector<std::string> getCallSequence() const;
     bool verifyCallSequence(const std::vector<std::string>& expectedSequence) const;
+
+    // Specific call data access for detailed verification
+    size_t getSpriteCallCount() const;
+    const SpriteCall& getSpriteCall(size_t index) const;
+    size_t getRectCallCount() const;
+    const RectCall& getRectCall(size_t index) const;
 
 private:
     // Mock screen size
