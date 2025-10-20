@@ -102,76 +102,57 @@ size_t RenderSystem::getLastRenderCount() const {
 void RenderSystem::renderSpriteEntity(const Entity& entity, EntityManager& entityManager) {
     (void)entityManager; // Suppress unused parameter warning
 
-    // Get actual Position component data (or use placeholders if not available)
-    float x = 100.0f;
-    float y = 200.0f;
-    float z = static_cast<float>(entity.id % 3); // Default fallback for old tests
-
-    if (positions) {
-        const Position* pos = positions->get(entity.id);
-        if (pos) {
-            x = pos->x;
-            y = pos->y;
-            z = pos->z;
-        }
+    // Get Position component data
+    if (!positions) {
+        return; // Cannot render without position data
     }
 
-    // Get actual Sprite component data (or use placeholders if not available)
-    float width = 64.0f;
-    float height = 48.0f;
-    int textureId = 42;
-
-    if (sprites) {
-        const Sprite* sprite = sprites->get(entity.id);
-        if (sprite) {
-            textureId = sprite->textureId;
-            width = sprite->width;
-            height = sprite->height;
-        }
+    const Position* pos = positions->get(entity.id);
+    if (!pos) {
+        return; // Entity doesn't have position component
     }
 
-    // Call renderer with actual or placeholder values
-    renderer->renderSprite(x, y, z, width, height, textureId);
+    // Get Sprite component data
+    if (!sprites) {
+        return; // Cannot render without sprite data
+    }
+
+    const Sprite* sprite = sprites->get(entity.id);
+    if (!sprite) {
+        return; // Entity doesn't have sprite component
+    }
+
+    // Call renderer with actual component data
+    renderer->renderSprite(pos->x, pos->y, pos->z, sprite->width, sprite->height, sprite->textureId);
 }
 
 void RenderSystem::renderShapeEntity(const Entity& entity, EntityManager& entityManager) {
     (void)entityManager; // Suppress unused parameter warning
 
-    // Get actual Position component data (or use placeholders if not available)
-    float x = 50.0f;
-    float y = 75.0f;
-
-    if (positions) {
-        const Position* pos = positions->get(entity.id);
-        if (pos) {
-            x = pos->x;
-            y = pos->y;
-            // Note: z-coordinate not used for rectangles currently
-        }
+    // Get Position component data
+    if (!positions) {
+        return; // Cannot render without position data
     }
 
-    // Get actual Renderable component data (or use placeholders if not available)
-    float width = 32.0f;
-    float height = 24.0f;
-    float red = 0.8f;
-    float green = 0.4f;
-    float blue = 0.2f;
-    float alpha = 0.9f;
-
-    if (renderables) {
-        const Renderable* renderable = renderables->get(entity.id);
-        if (renderable) {
-            width = renderable->width;
-            height = renderable->height;
-            red = renderable->red;
-            green = renderable->green;
-            blue = renderable->blue;
-            alpha = renderable->alpha;
-        }
+    const Position* pos = positions->get(entity.id);
+    if (!pos) {
+        return; // Entity doesn't have position component
     }
 
-    // Call renderer with actual or placeholder values
-    renderer->renderRect(x, y, width, height, red, green, blue, alpha);
+    // Get Renderable component data
+    if (!renderables) {
+        return; // Cannot render without renderable data
+    }
+
+    const Renderable* renderable = renderables->get(entity.id);
+    if (!renderable) {
+        return; // Entity doesn't have renderable component
+    }
+
+    // Call renderer with actual component data
+    // Note: z-coordinate not used for rectangles currently
+    renderer->renderRect(pos->x, pos->y, renderable->width, renderable->height,
+                        renderable->red, renderable->green, renderable->blue, renderable->alpha);
 }
 
 } // namespace ECS
