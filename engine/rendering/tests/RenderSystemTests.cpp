@@ -604,3 +604,137 @@ TEST_F(RenderSystemSpriteComponentTest, UsesActualRenderableData) {
   EXPECT_FLOAT_EQ(rectCall.blue, 0.4f) << "Should use actual Renderable.blue";
   EXPECT_FLOAT_EQ(rectCall.alpha, 0.9f) << "Should use actual Renderable.alpha";
 }
+
+// ============================================================================
+// Z-ORDERING / DEPTH SORTING TESTS
+// ============================================================================
+
+// Test that sprite entities are rendered in Z-order (back to front)
+TEST_F(RenderSystemTest, SpriteEntitiesRenderedInZOrder) {
+  // Create sprites with different z values (intentionally out of order)
+  EntityID spriteBack = createSpriteEntity(100.0f, 100.0f, 0.0f, 1, 32.0f, 32.0f);   // z=0.0 (back)
+  EntityID spriteFront = createSpriteEntity(200.0f, 200.0f, 2.0f, 2, 32.0f, 32.0f);  // z=2.0 (front)
+  EntityID spriteMiddle = createSpriteEntity(150.0f, 150.0f, 1.0f, 3, 32.0f, 32.0f); // z=1.0 (middle)
+
+  renderSystem->update(0.016f, *entityManager);
+
+  // Should render all 3 sprites
+  ASSERT_EQ(mockRenderer->getSpriteCallCount(), 3) << "Should render all 3 sprites";
+
+  // Verify rendering order: back to front (z=0.0, z=1.0, z=2.0)
+  const auto& call0 = mockRenderer->getSpriteCall(0);
+  const auto& call1 = mockRenderer->getSpriteCall(1);
+  const auto& call2 = mockRenderer->getSpriteCall(2);
+
+  EXPECT_FLOAT_EQ(call0.z, 0.0f) << "First sprite should have z=0.0 (back)";
+  EXPECT_FLOAT_EQ(call1.z, 1.0f) << "Second sprite should have z=1.0 (middle)";
+  EXPECT_FLOAT_EQ(call2.z, 2.0f) << "Third sprite should have z=2.0 (front)";
+
+  // Also verify the x positions match (sanity check)
+  EXPECT_FLOAT_EQ(call0.x, 100.0f) << "First rendered should be spriteBack";
+  EXPECT_FLOAT_EQ(call1.x, 150.0f) << "Second rendered should be spriteMiddle";
+  EXPECT_FLOAT_EQ(call2.x, 200.0f) << "Third rendered should be spriteFront";
+}
+
+// Test that renderable entities are rendered in Z-order
+TEST_F(RenderSystemTest, RenderableEntitiesRenderedInZOrder) {
+  // Create renderables with different z values (out of order)
+  EntityID rectFront = createRenderableEntity(300.0f, 300.0f, 5.0f, 16.0f, 16.0f, 1.0f, 0.0f, 0.0f);   // z=5.0 (front)
+  EntityID rectBack = createRenderableEntity(100.0f, 100.0f, -1.0f, 16.0f, 16.0f, 0.0f, 1.0f, 0.0f);   // z=-1.0 (back)
+  EntityID rectMiddle = createRenderableEntity(200.0f, 200.0f, 2.0f, 16.0f, 16.0f, 0.0f, 0.0f, 1.0f);  // z=2.0 (middle)
+
+  renderSystem->update(0.016f, *entityManager);
+
+  // Should render all 3 rectangles
+  ASSERT_EQ(mockRenderer->getRectCallCount(), 3) << "Should render all 3 rectangles";
+
+  // Verify rendering order: z=-1.0, z=2.0, z=5.0
+  const auto& call0 = mockRenderer->getRectCall(0);
+  const auto& call1 = mockRenderer->getRectCall(1);
+  const auto& call2 = mockRenderer->getRectCall(2);
+
+  EXPECT_FLOAT_EQ(call0.x, 100.0f) << "First rendered should be rectBack (z=-1.0)";
+  EXPECT_FLOAT_EQ(call1.x, 200.0f) << "Second rendered should be rectMiddle (z=2.0)";
+  EXPECT_FLOAT_EQ(call2.x, 300.0f) << "Third rendered should be rectFront (z=5.0)";
+
+  // Verify colors match expected order
+  EXPECT_FLOAT_EQ(call0.green, 1.0f) << "First should be green (rectBack)";
+  EXPECT_FLOAT_EQ(call1.blue, 1.0f) << "Second should be blue (rectMiddle)";
+  EXPECT_FLOAT_EQ(call2.red, 1.0f) << "Third should be red (rectFront)";
+}
+
+// Test mixed sprites and renderables rendered in correct Z-order
+TEST_F(RenderSystemTest, MixedEntitiesRenderedInZOrder) {
+  // Create mix of sprites and renderables at different z values
+  EntityID sprite1 = createSpriteEntity(100.0f, 100.0f, 1.0f, 1, 32.0f, 32.0f);        // z=1.0
+  EntityID rect1 = createRenderableEntity(200.0f, 200.0f, 0.0f, 16.0f, 16.0f, 1.0f, 0.0f, 0.0f);  // z=0.0
+  EntityID sprite2 = createSpriteEntity(300.0f, 300.0f, 3.0f, 2, 32.0f, 32.0f);        // z=3.0
+  EntityID rect2 = createRenderableEntity(400.0f, 400.0f, 2.0f, 16.0f, 16.0f, 0.0f, 1.0f, 0.0f);  // z=2.0
+
+  renderSystem->update(0.016f, *entityManager);
+
+  // Total render count should be 4
+  EXPECT_EQ(renderSystem->getLastRenderCount(), 4);
+
+  // Verify sprites rendered in Z-order
+  ASSERT_EQ(mockRenderer->getSpriteCallCount(), 2);
+  const auto& spriteCall0 = mockRenderer->getSpriteCall(0);
+  const auto& spriteCall1 = mockRenderer->getSpriteCall(1);
+
+  EXPECT_FLOAT_EQ(spriteCall0.z, 1.0f) << "First sprite should be z=1.0";
+  EXPECT_FLOAT_EQ(spriteCall1.z, 3.0f) << "Second sprite should be z=3.0";
+
+  // Verify rects rendered in Z-order
+  ASSERT_EQ(mockRenderer->getRectCallCount(), 2);
+  const auto& rectCall0 = mockRenderer->getRectCall(0);
+  const auto& rectCall1 = mockRenderer->getRectCall(1);
+
+  EXPECT_FLOAT_EQ(rectCall0.x, 200.0f) << "First rect should be z=0.0";
+  EXPECT_FLOAT_EQ(rectCall1.x, 400.0f) << "Second rect should be z=2.0";
+}
+
+// Test entities with equal Z values maintain stable order
+TEST_F(RenderSystemTest, EqualZValuesStableOrder) {
+  // Create entities with same Z value
+  EntityID sprite1 = createSpriteEntity(100.0f, 100.0f, 1.0f, 1, 32.0f, 32.0f);
+  EntityID sprite2 = createSpriteEntity(200.0f, 200.0f, 1.0f, 2, 32.0f, 32.0f);
+  EntityID sprite3 = createSpriteEntity(300.0f, 300.0f, 1.0f, 3, 32.0f, 32.0f);
+
+  renderSystem->update(0.016f, *entityManager);
+
+  // Should render all 3 sprites
+  ASSERT_EQ(mockRenderer->getSpriteCallCount(), 3);
+
+  // With stable sort, order should match creation order when z values are equal
+  const auto& call0 = mockRenderer->getSpriteCall(0);
+  const auto& call1 = mockRenderer->getSpriteCall(1);
+  const auto& call2 = mockRenderer->getSpriteCall(2);
+
+  EXPECT_FLOAT_EQ(call0.x, 100.0f) << "First should be sprite1";
+  EXPECT_FLOAT_EQ(call1.x, 200.0f) << "Second should be sprite2";
+  EXPECT_FLOAT_EQ(call2.x, 300.0f) << "Third should be sprite3";
+}
+
+// Test negative Z values work correctly
+TEST_F(RenderSystemTest, NegativeZValues) {
+  // Create sprites with negative Z values
+  EntityID spriteNeg2 = createSpriteEntity(100.0f, 100.0f, -2.0f, 1, 32.0f, 32.0f);  // z=-2.0
+  EntityID spritePos1 = createSpriteEntity(200.0f, 200.0f, 1.0f, 2, 32.0f, 32.0f);   // z=1.0
+  EntityID spriteNeg1 = createSpriteEntity(150.0f, 150.0f, -1.0f, 3, 32.0f, 32.0f);  // z=-1.0
+  EntityID spriteZero = createSpriteEntity(175.0f, 175.0f, 0.0f, 4, 32.0f, 32.0f);   // z=0.0
+
+  renderSystem->update(0.016f, *entityManager);
+
+  ASSERT_EQ(mockRenderer->getSpriteCallCount(), 4);
+
+  // Verify correct order: z=-2.0, z=-1.0, z=0.0, z=1.0
+  const auto& call0 = mockRenderer->getSpriteCall(0);
+  const auto& call1 = mockRenderer->getSpriteCall(1);
+  const auto& call2 = mockRenderer->getSpriteCall(2);
+  const auto& call3 = mockRenderer->getSpriteCall(3);
+
+  EXPECT_FLOAT_EQ(call0.z, -2.0f) << "First should be z=-2.0";
+  EXPECT_FLOAT_EQ(call1.z, -1.0f) << "Second should be z=-1.0";
+  EXPECT_FLOAT_EQ(call2.z, 0.0f) << "Third should be z=0.0";
+  EXPECT_FLOAT_EQ(call3.z, 1.0f) << "Fourth should be z=1.0";
+}
