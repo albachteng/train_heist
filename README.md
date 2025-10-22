@@ -11,8 +11,8 @@ cd train_heist
 
 # Build third-party dependencies (see Platform Setup below)
 # Then build and test
-make test         # Build and run unit tests (221 tests, fast)
-make integration  # Build and run integration tests (55 SFML tests)
+make test         # Build and run unit tests (286 tests, fast)
+make integration  # Build and run integration tests (94 SFML tests)
 make run          # Build and run the main game executable
 ```
 
@@ -109,24 +109,26 @@ The project uses a cross-platform Makefile that automatically detects your opera
 
 ```bash
 make              # Build the main game executable
-make test         # Build and run unit tests (221 tests, fast)
-make integration  # Build and run integration tests (55 SFML tests)
+make test         # Build and run unit tests (286 tests, fast)
+make integration  # Build and run integration tests (94 SFML tests)
 make run          # Build and run the main game executable
 make clean        # Clean all build artifacts
 ```
 
 ### Testing Architecture
 
-The project uses a **two-tier testing system** with 276 tests total:
+The project uses a **two-tier testing system** with 380 tests total:
 
-- **Unit Tests** (`make test`): 221 fast tests with no external dependencies
+- **Unit Tests** (`make test`): 286 fast tests with no external dependencies
   - Mock implementations for graphics/window systems
-  - ECS core, logging, transform components, physics components, systems layer
-  - Runs in ~3ms, ideal for development iteration
-- **Integration Tests** (`make integration`): 55 SFML integration tests
+  - ECS core, logging, systems layer, transform components, physics components, rendering components
+  - Movement system, input system, Z-ordering/depth sorting, and complete mock infrastructure
+  - Runs in ~4ms, ideal for development iteration
+- **Integration Tests** (`make integration`): 94 SFML integration tests
   - Real SFML library validation and integration testing
-  - Color conversion, event handling, rendering pipeline
-  - Requires SFML libraries, runs in ~300ms
+  - Color conversion, event handling, rendering pipeline, sprite loading/rendering
+  - Window management, resource management, input processing
+  - Requires SFML libraries, runs in ~1.4s
 
 ### Build Directories
 
@@ -250,30 +252,34 @@ See [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md) for detailed game mechanics and d
 
 ## Testing
 
-The project uses a comprehensive **two-tier test-driven development approach** with 276 tests total:
+The project uses a comprehensive **two-tier test-driven development approach** with 380 tests total:
 
 ```bash
-make test         # Run unit tests (221 tests, fast)
-make integration  # Run integration tests (55 SFML tests)
+make test         # Run unit tests (286 tests, fast)
+make integration  # Run integration tests (94 SFML tests)
 ```
 
 ### Test Organization
 
-- **Unit Tests** (`make test`): 221 fast tests with no external dependencies
+- **Unit Tests** (`make test`): 286 fast tests with no external dependencies
   - **Mock implementations** for testing without graphics/window systems
   - **ECS core**: Entity management, component arrays, event queues, component registry
   - **Systems layer**: SystemManager, priority-based execution, dependency injection, SystemUtils
   - **Transform components**: Position, Rotation, Scale, GridPosition with 2.5D utilities
   - **Physics components**: GridMovement, GridBounds, Velocity, Acceleration with ZII compliance
+  - **Rendering components**: Sprite, Renderable with ZII compliance
   - **Movement system**: Grid-based movement, queued actions, bounds validation, interpolation
   - **Input system**: Keyboard/mouse processing, ECS integration, input pipeline
-  - Runs in ~3ms, ideal for development iteration
-- **Integration Tests** (`make integration`): 55 SFML integration tests
+  - **Rendering system**: Entity filtering, rendering orchestration, component data usage, Z-ordering/depth sorting
+  - Runs in ~4ms, ideal for development iteration
+- **Integration Tests** (`make integration`): 94 SFML integration tests
   - Real SFML library validation and integration testing
-  - **SFMLRenderer testing**: Color conversion, rendering pipeline validation
+  - **SFMLRenderer testing**: Color conversion, rendering pipeline validation, sprite rendering
   - **SFMLWindowManager testing**: Window management and event conversion
+  - **SFMLResourceManager testing**: Texture loading from PNG/GIF files, resource handles
   - **Event handling verification**: SFML → Engine event abstraction layer
-  - Requires SFML libraries, runs in ~300ms
+  - **Sprite integration testing**: End-to-end sprite loading and rendering pipeline
+  - Requires SFML libraries, runs in ~1.4s
 
 ## Documentation
 

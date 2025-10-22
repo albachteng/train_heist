@@ -32,12 +32,29 @@ We're using a **two-track approach** that delivers value quickly while building 
 - **Turn-Based Support**: Manual movement execution, queued movement system for turn-based gameplay ✅ **COMPLETED**
 - **Interactive Demo**: Working keyboard-controlled entity with mouse logging via complete input pipeline ✅ **COMPLETED**
 - **Two-Tier Testing**: Unit tests + Integration tests with separate build targets ✅ **COMPLETED**
-- **Test Coverage**: 276 comprehensive tests (100% pass rate) covering all engine systems ✅ **CURRENT**
+- **Test Coverage**: 380 comprehensive tests (100% pass rate) covering all engine systems ✅ **CURRENT**
+  - 286 unit tests (ECS core, systems, components, physics, rendering logic with mocks, Z-ordering)
+  - 94 integration tests (SFML rendering, windowing, resource loading, sprite integration)
+- **Sprite Rendering**: Basic sprite loading and rendering functional ✅ **COMPLETED**
+  - Texture loading from PNG/GIF files via SFMLResourceManager
+  - Sprite component rendering with full SFML integration
+  - **Known Limitation**: Currently renders entire textures (no sprite sheet frame selection yet)
+- **Z-Ordering / Depth Sorting**: Full depth-based rendering implemented ✅ **COMPLETED**
+  - Entities sorted by Z-coordinate before rendering (back-to-front)
+  - Stable sorting maintains order for entities with equal Z values
+  - Supports negative Z values and mixed sprite/renderable rendering
+  - Critical foundation for isometric 2.5D depth layering
+- **Code Quality**: Removed fallback placeholder values from RenderSystem ✅ **COMPLETED**
+  - Tests now use actual component data instead of hardcoded fallbacks
+  - Integration tests properly fail on window creation errors (no silent skipping)
 
-### 🚧 In Progress (Phase 2: Main.cpp Integration & Multi-Entity Rendering)
-- **Current Status**: Physics system fully implemented and tested, ready for main.cpp integration
-- **Next Priority**: Update main.cpp demo to use MovementSystem with grid-based movement
-- **Focus**: Demonstrate discrete grid movement with smooth visual interpolation
+### 🚧 In Progress (Phase 2: Multi-Entity Rendering & Animation)
+- **Current Status**: Z-ordering completed! Next focus is sprite sheet animation system
+- **Next Priorities**:
+  1. Sprite sheet/animation system for proper frame-based sprite rendering
+  2. Animation state management (idle, walk, attack, etc.)
+  3. Frame timing and playback control
+  4. Asset loading improvements for sprite sheet definitions and animation data
 
 ## 🚀 Development Phases
 
@@ -105,25 +122,30 @@ We're using a **two-track approach** that delivers value quickly while building 
 **Goal**: Grid-based movement with multiple entities
 
 #### Deliverables
-- [ ] **Grid-Based Physics System**
-  - Movement validation and collision detection
-  - Smooth interpolation between grid positions
-  - **2.5D Preparation**: Grid coordinates designed for isometric projection
-- [ ] **Multi-Entity Rendering**
-  - Render multiple sprites simultaneously
-  - Z-ordering and layering support (critical for isometric depth)
-  - **2.5D Foundation**: Depth sorting and isometric sprite positioning
-- [ ] **Basic Animation System**
-  - Smooth movement between grid cells
-  - Simple state-based animations
-- [ ] **Asset Loading System**
-  - Texture loading and management
-  - Resource handles and caching
+- [x] **Grid-Based Physics System** ✅ **COMPLETED**
+  - Movement validation and collision detection ✅
+  - Smooth interpolation between grid positions ✅
+  - **2.5D Preparation**: Grid coordinates designed for isometric projection ✅
+- [x] **Basic Asset Loading System** ✅ **COMPLETED**
+  - Texture loading and management ✅
+  - Resource handles and caching ✅
+  - **Known Limitation**: No sprite sheet frame selection (renders entire textures)
+- [x] **Multi-Entity Rendering** ✅ **COMPLETED**
+  - Render multiple sprites simultaneously ✅ **WORKS**
+  - Z-ordering and layering support (critical for isometric depth) ✅ **IMPLEMENTED**
+  - **2.5D Foundation**: Depth sorting enabled, ready for isometric sprite positioning ✅ **READY**
+- [ ] **Sprite Sheet Animation System** ⏳ **NOT STARTED**
+  - Sprite sheet frame selection and rendering
+  - Animation state management (idle, walk, attack, etc.)
+  - Frame timing and playback control
+  - **Note**: Currently renders whole textures; need frame-based system for proper animations
 
 **Success Criteria Phase 2:**
-- ✅ Multiple colored squares on a grid
-- ✅ Turn-based or smooth movement
-- ✅ Clean separation between engine and game logic
+- ✅ Multiple colored squares on a grid ✅ **ACHIEVED**
+- ✅ Turn-based or smooth movement ✅ **ACHIEVED**
+- ✅ Clean separation between engine and game logic ✅ **ACHIEVED**
+- ✅ Z-ordered rendering for depth layering ✅ **ACHIEVED**
+- [ ] Sprite animations with proper frame selection ⏳ **PENDING**
 
 ### **Phase 3: Train Heist Prototype** (Target: Week 3+)
 **Goal**: Basic train heist gameplay
@@ -298,10 +320,10 @@ LOG_ERROR("Renderer", "Failed to load texture: {}", filename);
 ## 📈 Metrics and Success Tracking
 
 ### **Technical Metrics**
-- Test coverage: Currently 276 passing tests (221 unit + 55 integration tests)
-  - Unit tests: ECS core, logging, systems, components, physics, and mock implementations
-  - Integration tests: SFML wrapper validation, color conversion, event handling
-- Build system: Two-tier testing (`make test` for fast unit tests, `make integration` for SFML tests)
+- Test coverage: Currently 380 passing tests (286 unit + 94 integration tests) - 100% pass rate
+  - Unit tests: ECS core, logging, systems layer, transform components, rendering components, physics components, movement system, input system, Z-ordering/depth sorting, and complete mock infrastructure
+  - Integration tests: SFML wrapper validation, color conversion, event handling, sprite loading/rendering, window management, resource management
+- Build system: Two-tier testing (`make test` for fast unit tests ~4ms, `make integration` for SFML tests ~1.4s)
 - Build time: Target <10 seconds for incremental builds
 - Frame rate: Target 60 FPS for simple scenes
 
@@ -326,5 +348,5 @@ This roadmap will be updated as development progresses:
 
 ---
 
-*Last Updated: 2025-08-19*
-*Next Review: After Input System completion*
+*Last Updated: 2025-10-21*
+*Next Review: After sprite sheet animation system implementation*

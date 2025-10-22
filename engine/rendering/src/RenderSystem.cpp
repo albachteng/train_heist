@@ -2,6 +2,7 @@
 #include "../../ecs/components/include/Transform.hpp"
 #include "../../ecs/components/include/Rendering.hpp"
 #include "../../ecs/include/ComponentRegistry.hpp"
+#include <algorithm> // for std::stable_sort
 
 namespace ECS {
 
@@ -40,7 +41,8 @@ void RenderSystem::update(float deltaTime, EntityManager& entityManager) {
     uint64_t spriteBit = getComponentBit<Sprite>();
     uint64_t renderableBit = getComponentBit<Renderable>();
 
-    // Process entities with Position + (Sprite OR Renderable)
+    // Collect renderable entities
+    std::vector<const Entity*> renderableEntities;
     for (const Entity* entity : entities) {
         if (!entityManager.isValid(*entity)) {
             continue; // Skip invalid entities
@@ -49,21 +51,39 @@ void RenderSystem::update(float deltaTime, EntityManager& entityManager) {
         bool hasPosition = (entity->componentMask & positionBit) != 0;
         bool hasSprite = (entity->componentMask & spriteBit) != 0;
         bool hasRenderable = (entity->componentMask & renderableBit) != 0;
-        
-        if (hasPosition && (hasSprite || hasRenderable)) {
-            lastRenderCount++;
-            
-            if (hasSprite) {
-                // Render sprite entity with placeholder values
-                // TODO: Replace with actual component data access
-                renderSpriteEntity(*entity, entityManager);
-            }
 
-            if (hasRenderable) {
-                // Render shape entity with placeholder values
-                // TODO: Replace with actual component data access
-                renderShapeEntity(*entity, entityManager);
-            }
+        if (hasPosition && (hasSprite || hasRenderable)) {
+            renderableEntities.push_back(entity);
+        }
+    }
+
+    // Sort entities by Z coordinate (back to front rendering)
+    // Use stable_sort to maintain relative order for entities with equal Z values
+    std::stable_sort(renderableEntities.begin(), renderableEntities.end(),
+        [this](const Entity* a, const Entity* b) {
+            const Position* posA = positions->get(a->id);
+            const Position* posB = positions->get(b->id);
+
+            // Entities without position shouldn't be in this list, but handle gracefully
+            if (!posA || !posB) return false;
+
+            // Lower Z values render first (appear behind)
+            return posA->z < posB->z;
+        });
+
+    // Render entities in Z-sorted order
+    for (const Entity* entity : renderableEntities) {
+        lastRenderCount++;
+
+        bool hasSprite = (entity->componentMask & spriteBit) != 0;
+        bool hasRenderable = (entity->componentMask & renderableBit) != 0;
+
+        if (hasSprite) {
+            renderSpriteEntity(*entity, entityManager);
+        }
+
+        if (hasRenderable) {
+            renderShapeEntity(*entity, entityManager);
         }
     }
     
