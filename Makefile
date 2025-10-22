@@ -67,8 +67,8 @@ TEST_SRC := $(wildcard $(TEST_DIR)/*.cpp)
 # Engine modules that have tests
 TEST_MODULES := ecs logging rendering physics input resources
 ENGINE_TEST_SRC := $(foreach module,$(TEST_MODULES),$(wildcard engine/$(module)/tests/*.cpp))
-# Filter out SFML tests since we're not linking SFML libraries in tests
-ENGINE_TEST_SRC := $(filter-out engine/rendering/tests/SFML%.cpp engine/input/tests/SFML%.cpp, $(ENGINE_TEST_SRC))
+# Filter out SFML tests and integration tests since we're not linking SFML libraries in unit tests
+ENGINE_TEST_SRC := $(filter-out engine/rendering/tests/SFML%.cpp engine/input/tests/SFML%.cpp engine/rendering/tests/SpriteIntegrationTests.cpp, $(ENGINE_TEST_SRC))
 # Special handling for components (nested under ecs)
 COMPONENTS_TEST_SRC := $(wildcard $(COMPONENTS_DIR)/tests/*.cpp)
 SYSTEMS_TEST_SRC := $(wildcard $(ECS_DIR)/systems/tests/*.cpp)
@@ -86,7 +86,7 @@ TEST_PHYSICS_SRC := $(PHYSICS_SRC)
 TEST_PHYSICS_OBJ := $(patsubst $(PHYSICS_DIR)/%.cpp,$(BUILD_DIR)/physics/%.o,$(TEST_PHYSICS_SRC))
 
 # Integration tests - SFML-specific tests that need SFML libraries
-INTEGRATION_TEST_SRC := $(wildcard engine/rendering/tests/SFML*.cpp engine/input/tests/SFML*.cpp)
+INTEGRATION_TEST_SRC := $(wildcard engine/rendering/tests/SFML*.cpp engine/input/tests/SFML*.cpp engine/rendering/tests/SpriteIntegrationTests.cpp)
 INTEGRATION_TEST_OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(INTEGRATION_TEST_SRC))
 
 # Object files
